@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Đánh Giá Khuôn Mặt</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1 class="app-title">Đánh Giá Khuôn Mặt</h1>
+            <p class="app-subtitle">Phân tích đường nét diện mạo, đo đạc tỷ lệ hình học và tư vấn phong cách</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Chuyển đổi phương thức truyền ảnh -->
+            <div class="mode-tabs">
+                <button type="button" class="tab-btn active" id="cameraTabBtn">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                    Sử dụng Camera
+                </button>
+                <button type="button" class="tab-btn" id="uploadTabBtn">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Tải ảnh từ máy
+                </button>
+            </div>
+
+            <!-- Khu vực Camera -->
+            <section class="camera-section" id="cameraSection">
+                <div class="camera-container" id="cameraContainer">
+                    <video id="videoElement" autoplay playsinline muted></video>
+                    <canvas id="canvasElement"></canvas>
+                    <div class="camera-guide-overlay" id="cameraGuide">
+                        <div class="face-guide-oval"></div>
+                    </div>
+                    <!-- Tia quét hiệu ứng chờ -->
+                    <div class="scanner-overlay" id="cameraScanner" style="display: none;">
+                        <div class="scan-beam"></div>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <button type="button" class="btn btn-secondary" id="toggleCameraBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 1l22 22"></path>
+                            <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        Khởi động lại Camera
+                    </button>
+                    <button type="button" class="btn btn-accent" id="captureAnalyzeBtn" disabled>
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Chụp và Phân tích
+                    </button>
+                </div>
+                <p class="camera-notice" id="cameraNotice">Đang khởi tạo bộ phân tích điểm mốc diện mạo...</p>
+            </section>
+
+            <!-- Khu vực tải tệp ảnh -->
+            <section class="upload-section" id="uploadSection" style="display: none;">
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" accept="image/*" class="file-input">
+                    <div class="drop-content" id="dropContent">
+                        <p class="drop-title">Kéo và thả ảnh chân dung vào đây</p>
+                        <p class="drop-note">Hỗ trợ định dạng JPG, PNG, WEBP</p>
+                        <button type="button" class="btn btn-primary" id="selectBtn">
+                            <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Chọn ảnh từ máy
+                        </button>
+                    </div>
+                    <div class="preview-wrapper" id="previewWrapper" style="display: none;">
+                        <div class="preview-image-container" id="previewImageContainer">
+                            <img id="imagePreview" alt="Xem trước ảnh khuôn mặt" class="preview-img">
+                            <div class="scanner-overlay" id="uploadScanner" style="display: none;">
+                                <div class="scan-beam"></div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-remove" id="removeBtn">
+                            <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            Đổi ảnh khác
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button type="button" class="btn btn-accent" id="analyzeUploadBtn" disabled>
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        Bắt đầu phân tích
+                    </button>
+                </div>
+            </section>
+
+            <!-- Khu vực kết quả phân tích -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <h2 class="result-title">Kết Quả Phân Tích Toàn Diện</h2>
+
+                <!-- Thông báo cảnh báo kiểm thử chất lượng ảnh -->
+                <div class="warning-box" id="warningBox" style="display: none;"></div>
+
+                <!-- Khối chỉ số đo lường hình học -->
+                <div class="metrics-container" id="metricsContainer" style="display: none;">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-label">Tỷ Lệ Chiều Dọc (Trán - Mũi - Cằm)</span>
+                            <span class="metric-value" id="verticalRatioValue">--</span>
+                        </div>
+                        <div class="ratio-bars-container">
+                            <div class="ratio-bar-item">
+                                <span class="bar-title">Trán</span>
+                                <div class="bar-track"><div class="bar-fill" id="foreheadBar"></div></div>
+                                <span class="bar-percent" id="foreheadPercent">--%</span>
+                            </div>
+                            <div class="ratio-bar-item">
+                                <span class="bar-title">Mũi</span>
+                                <div class="bar-track"><div class="bar-fill" id="noseBar"></div></div>
+                                <span class="bar-percent" id="nosePercent">--%</span>
+                            </div>
+                            <div class="ratio-bar-item">
+                                <span class="bar-title">Cằm</span>
+                                <div class="bar-track"><div class="bar-fill" id="chinBar"></div></div>
+                                <span class="bar-percent" id="chinPercent">--%</span>
+                            </div>
+                        </div>
+                        <p class="metric-note">Tiêu chuẩn vàng: 33.3% - 33.3% - 33.3% (tương đương 1.0 : 1.0 : 1.0)</p>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-label">Tỷ Lệ Chiều Ngang (Quy Tắc Ngũ Nhãn)</span>
+                            <span class="metric-value" id="horizontalRatioValue">--</span>
+                        </div>
+                        <div class="single-progress-wrapper">
+                            <div class="bar-track"><div class="bar-fill" id="eyeWidthBar"></div></div>
+                        </div>
+                        <p class="metric-note">Tỷ lệ độ rộng mắt so với bề ngang mặt (tiêu chuẩn lý tưởng là xấp xỉ 20%).</p>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-label">Độ Đối Xứng Khuôn Mặt</span>
+                            <span class="metric-value" id="symmetryValue">--</span>
+                        </div>
+                        <div class="single-progress-wrapper">
+                            <div class="bar-track"><div class="bar-fill" id="symmetryBar"></div></div>
+                        </div>
+                        <p class="metric-note">Mức độ tương quan cân xứng giữa hai nửa diện mạo qua trục trung tâm.</p>
+                    </div>
+                </div>
+
+                <!-- Khối nhận xét chuyên sâu từ AI -->
+                <div class="result-card" id="resultCard">
+                    <div class="spinner-wrapper" id="spinnerWrapper">
+                        <div class="spinner"></div>
+                        <p class="loading-text">Hệ thống đang quét diện mạo và giải mã tỷ lệ ngũ quan...</p>
+                    </div>
+                    <div class="result-body" id="resultBody" style="display: none;"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
