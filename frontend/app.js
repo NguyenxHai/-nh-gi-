@@ -88,6 +88,29 @@ async function initFaceLandmarker() {
     }
 }
 
+// Xóa sạch trạng thái cũ khi khởi động lại camera hoặc đổi chế độ
+function resetAllStates() {
+    resultSection.style.display = 'none';
+    resultBody.innerHTML = '';
+    metricsContainer.style.display = 'none';
+    warningBox.style.display = 'none';
+    warningBox.innerHTML = '';
+
+    // Xóa nội dung khung hình tĩnh cũ trên canvas
+    if (canvasElement.width && canvasElement.height) {
+        const ctx = canvasElement.getContext('2d');
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    }
+    canvasElement.style.display = 'none';
+
+    // Hiện lại khung camera động
+    videoElement.style.display = 'block';
+    cameraGuide.style.display = 'flex';
+    captureAnalyzeBtn.disabled = false;
+    currentFileBase64 = null;
+    stopScanningAnimation();
+}
+
 // Khởi tạo luồng ghi hình từ webcam kèm xử lý ngoại lệ
 async function startCamera() {
     stopCamera();
@@ -152,24 +175,26 @@ function stopScanningAnimation() {
 
 // Chuyển đổi tab
 cameraTabBtn.addEventListener('click', () => {
+    resetAllStates();
     cameraTabBtn.classList.add('active');
     uploadTabBtn.classList.remove('active');
     cameraSection.style.display = 'flex';
     uploadSection.style.display = 'none';
-    warningBox.style.display = 'none';
     startCamera();
 });
 
 uploadTabBtn.addEventListener('click', () => {
+    resetAllStates();
     uploadTabBtn.classList.add('active');
     cameraTabBtn.classList.remove('active');
     cameraSection.style.display = 'none';
     uploadSection.style.display = 'block';
-    warningBox.style.display = 'none';
     stopCamera();
 });
 
+// Bấm nút khởi động lại camera: xóa sạch kết quả cũ và kích hoạt lại luồng ghi hình mới
 toggleCameraBtn.addEventListener('click', () => {
+    resetAllStates();
     startCamera();
 });
 
@@ -230,7 +255,7 @@ function pointToLineDistance(p, l1, l2) {
 }
 
 // Trích xuất điểm mốc và tính toán các chỉ số hình học khuôn mặt
-function extractAndCalculateMetrics(landmarks, width, height) {
+function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
     // Chuyển đổi tọa độ chuẩn hóa sang tọa độ pixel thực tế
     const toPx = (point) => ({
         x: point.x * width,
@@ -277,6 +302,12 @@ function extractAndCalculateMetrics(landmarks, width, height) {
     const eyeRatioPercent = faceWidth > 0 ? (avgEyeWidth / faceWidth) * 100 : 20.0;
     const horizontalEyeRatioText = `${eyeRatioPercent.toFixed(1)}% (độ rộng mắt trung bình so với bề ngang khuôn mặt)`;
 
+    // Tính tỷ lệ chiều ngang so với chiều dọc mặt (xác định dáng mặt)
+    const faceRatio = totalVertical > 0 ? (faceWidth / totalVertical) : 0.82;
+
+    // Tính độ xếch của đuôi mắt (xác định dáng mắt)
+    const eyeSlant = ((eyeLeftOuter.y - eyeLeftInner.y) + (eyeRightInner.y - eyeRightOuter.y)) / 2;
+
     // 3. Tính độ đối xứng (khoảng cách từ trục giữa mặt sang các điểm hai bên)
     const distEyeRight = pointToLineDistance(eyeRightOuter, glabella, chinBottom);
     const distEyeLeft = pointToLineDistance(eyeLeftOuter, glabella, chinBottom);
@@ -304,6 +335,26 @@ function extractAndCalculateMetrics(landmarks, width, height) {
     const overallSymmetry = ((eyeSym + innerEyeSym + mouthSym + jawSym) / 4) * 100;
     const symmetryScoreText = `${overallSymmetry.toFixed(1)}%`;
 
+    // 4. Trích xuất sắc thái màu da thực tế (Personal Color)
+    let skinWarmth = 15;
+    try {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(sourceElement, 0, 0, width, height);
+
+        const sampleX = Math.round((noseTip.x + jawRight.x) / 2);
+        const sampleY = Math.round((noseTip.y + subnasale.y) / 2);
+
+        if (sampleX > 0 && sampleX < width && sampleY > 0 && sampleY < height) {
+            const pixel = tempCtx.getImageData(sampleX, sampleY, 1, 1).data;
+            skinWarmth = (pixel[0] - pixel[2]); // Chênh lệch đỏ - lam
+        }
+    } catch (e) {
+        skinWarmth = 15;
+    }
+
     return {
         points: {
             foreheadTop,
@@ -327,7 +378,10 @@ function extractAndCalculateMetrics(landmarks, width, height) {
         eyeRatioPercent,
         horizontalEyeRatioText,
         overallSymmetry,
-        symmetryScoreText
+        symmetryScoreText,
+        faceRatio,
+        eyeSlant,
+        skinWarmth
     };
 }
 
@@ -387,12 +441,61 @@ function renderMetricsDashboard(metrics) {
 }
 
 // Hiển thị kết quả phân tích có cấu trúc dưới dạng thẻ trực quan
-function renderStructuredAnalysis(data) {
+function renderStructuredAnalysis(data, isDemo, notice) {
     const scoreVal = typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5;
     const scorePercent = Math.min(100, Math.max(0, scoreVal * 10));
 
+    // Thông báo trạng thái kết nối API
+    let statusBannerHtml = '';
+    if (isDemo) {
+        statusBannerHtml = `
+            <div class="api-notice-banner warning-notice">
+                <span class="banner-title">Thông báo trạng thái phân tích</span>
+                <p class="banner-desc">Hệ thống đang hiển thị kết quả tính toán mô phỏng do tệp cấu hình máy chủ chưa có khóa GEMINI_API_KEY. Vui lòng thêm khóa API vào tệp backend/.env để kích hoạt mô hình Gemini 2.5 Flash phân tích trực tiếp từng bức ảnh.</p>
+            </div>
+        `;
+    } else {
+        statusBannerHtml = `
+            <div class="api-notice-banner success-notice">
+                <span class="banner-title">Đã kết nối Gemini API</span>
+                <p class="banner-desc">Kết quả được phân tích trực tiếp từ mô hình trí tuệ nhân tạo Google Gemini 2.5 Flash dựa trên hình ảnh chân dung và các số liệu nhân trắc học.</p>
+            </div>
+        `;
+    }
+
+    // Xử lý danh sách 3 kiểu tóc đề xuất
+    let hairstylesHtml = '';
+    if (Array.isArray(data.recommended_hairstyles) && data.recommended_hairstyles.length > 0) {
+        hairstylesHtml = data.recommended_hairstyles.map((style, idx) => `
+            <div class="style-item-card">
+                <span class="style-item-badge">Kiểu ${idx + 1}</span>
+                <p class="style-item-desc">${style}</p>
+            </div>
+        `).join('');
+    } else {
+        hairstylesHtml = '<p class="part-desc">Đang cập nhật các kiểu tóc phù hợp.</p>';
+    }
+
     resultBody.innerHTML = `
-        <!-- Thẻ điểm số và dáng khuôn mặt -->
+        ${statusBannerHtml}
+
+        <!-- Thẻ đặc trưng khí chất và sắc tố cá nhân -->
+        <div class="vibe-container-grid">
+            <div class="vibe-card highlight-vibe">
+                <span class="vibe-label">Hệ Động Vật Diện Mạo</span>
+                <span class="vibe-main-text">${data.vibe_type || 'Đang xác định'}</span>
+            </div>
+            <div class="vibe-card">
+                <span class="vibe-label">Dáng Mắt Chủ Đạo</span>
+                <span class="vibe-sub-text">${data.eye_shape || 'Dáng mắt tự nhiên'}</span>
+            </div>
+            <div class="vibe-card">
+                <span class="vibe-label">Sắc Tố Cá Nhân (Personal Color)</span>
+                <span class="vibe-sub-text">${data.skin_tone || 'Tone tự nhiên hài hòa'}</span>
+            </div>
+        </div>
+
+        <!-- Thẻ điểm số hài hòa và dáng khuôn mặt -->
         <div class="analysis-overview-grid">
             <div class="score-card">
                 <span class="score-title">Điểm số hài hòa tổng thể</span>
@@ -410,44 +513,41 @@ function renderStructuredAnalysis(data) {
             </div>
         </div>
 
+        <!-- Đề xuất 3 kiểu tóc phù hợp nhất -->
+        <div class="hairstyles-section">
+            <h3 class="parts-section-title">Đề Xuất 3 Kiểu Tóc Phù Hợp Nhất</h3>
+            <div class="hairstyles-grid">
+                ${hairstylesHtml}
+            </div>
+        </div>
+
+        <!-- Đề xuất hình dáng gọng kính phù hợp -->
+        <div class="glasses-section">
+            <h3 class="parts-section-title">Hình Dáng Gọng Kính Phù Hợp</h3>
+            <div class="glasses-card">
+                <p class="glasses-desc">${data.recommended_glasses || 'Gọng kính thanh mảnh, bo tròn nhẹ nhàng.'}</p>
+            </div>
+        </div>
+
         <!-- Nhận xét ưu điểm từng bộ phận -->
         <div class="parts-section">
             <h3 class="parts-section-title">Nhận Xét Ưu Điểm Từng Bộ Phận</h3>
             <div class="parts-grid">
                 <div class="part-card">
                     <span class="part-title">Đôi Mắt và Ánh Nhìn</span>
-                    <p class="part-desc">${data.featuresAnalysis.eyes || data.featuresAnalysis.keyFeatures || 'Ánh nhìn tươi sáng, đường nét thanh tú.'}</p>
+                    <p class="part-desc">${data.featuresAnalysis?.eyes || 'Ánh nhìn tươi sáng, đường nét thanh tú.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Sống Mũi và Tỷ Lệ</span>
-                    <p class="part-desc">${data.featuresAnalysis.nose || 'Dáng mũi tự nhiên, tạo điểm nhấn cân xứng cho khuôn mặt.'}</p>
+                    <p class="part-desc">${data.featuresAnalysis?.nose || 'Dáng mũi tự nhiên, tạo điểm nhấn cân xứng cho khuôn mặt.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Khuôn Miệng và Nụ Cười</span>
-                    <p class="part-desc">${data.featuresAnalysis.lips || 'Đường viền môi duyên dáng, nụ cười rạng rỡ.'}</p>
+                    <p class="part-desc">${data.featuresAnalysis?.lips || 'Đường viền môi duyên dáng, nụ cười rạng rỡ.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Xương Hàm và Cằm</span>
-                    <p class="part-desc">${data.featuresAnalysis.jawline || 'Đường viền hàm thon gọn, cằm cân đối với tổng thể.'}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Gợi ý định hình phong cách -->
-        <div class="styling-section">
-            <h3 class="parts-section-title">Gợi Ý Định Hình Phong Cách</h3>
-            <div class="styling-grid">
-                <div class="styling-card">
-                    <span class="styling-card-title">Kiểu Tóc Phù Hợp</span>
-                    <p class="styling-card-desc">${data.stylingAdvice.hairstyle}</p>
-                </div>
-                <div class="styling-card">
-                    <span class="styling-card-title">Dáng Gọng Kính và Phụ Kiện</span>
-                    <p class="styling-card-desc">${data.stylingAdvice.eyewear}</p>
-                </div>
-                <div class="styling-card">
-                    <span class="styling-card-title">Phong Cách Chăm Sóc và Trang Điểm</span>
-                    <p class="styling-card-desc">${data.stylingAdvice.makeupOrGrooming}</p>
+                    <p class="part-desc">${data.featuresAnalysis?.jawline || 'Đường viền hàm thon gọn, cằm cân đối với tổng thể.'}</p>
                 </div>
             </div>
         </div>
@@ -455,7 +555,7 @@ function renderStructuredAnalysis(data) {
         <!-- Lời đúc kết diện mạo -->
         <div class="summary-card">
             <h4 class="summary-title">Lời Đúc Kết Diện Mạo</h4>
-            <p class="summary-text">${data.summary}</p>
+            <p class="summary-text">${data.summary || 'Khuôn mặt mang đường nét thanh tú, hài hòa và thần thái cuốn hút.'}</p>
         </div>
     `;
     resultBody.style.display = 'block';
@@ -525,16 +625,12 @@ function handleUploadFile(file) {
 }
 
 function resetUpload() {
-    currentFileBase64 = null;
+    resetAllStates();
     fileInput.value = '';
     imagePreview.src = '';
     previewWrapper.style.display = 'none';
     dropContent.style.display = 'flex';
     analyzeUploadBtn.disabled = true;
-    resultSection.style.display = 'none';
-    metricsContainer.style.display = 'none';
-    warningBox.style.display = 'none';
-    resultBody.innerHTML = '';
 }
 
 analyzeUploadBtn.addEventListener('click', async () => {
@@ -592,7 +688,7 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
             const width = imageSourceElement.naturalWidth || imageSourceElement.videoWidth || imageSourceElement.width || 640;
             const height = imageSourceElement.naturalHeight || imageSourceElement.videoHeight || imageSourceElement.height || 480;
 
-            calculatedMetrics = extractAndCalculateMetrics(landmarks, width, height);
+            calculatedMetrics = extractAndCalculateMetrics(landmarks, width, height, imageSourceElement);
             renderMetricsDashboard(calculatedMetrics);
 
             // Nếu nguồn là canvas của camera, vẽ các đường phụ trợ
@@ -623,8 +719,9 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
         // Đợi đồng thời cả cuộc gọi mạng và hiệu ứng tia quét
         const [resData] = await Promise.all([fetchPromise, minScanTimer]);
 
-        if (resData.success && resData.data) {
-            renderStructuredAnalysis(resData.data);
+        if (resData.success && (resData.data || resData.vibe_type)) {
+            const finalData = resData.data || resData;
+            renderStructuredAnalysis(finalData, resData.isDemo, resData.notice);
         } else {
             resultBody.innerHTML = `<div class="error-message">${resData.message || 'Không thể thực hiện đánh giá. Vui lòng kiểm tra lại cấu hình hệ thống.'}</div>`;
             resultBody.style.display = 'block';
