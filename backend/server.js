@@ -4,6 +4,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { GoogleGenAI, Type } = require('@google/genai');
 
+// Nạp biến môi trường từ các vị trí khả dĩ
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
 const app = express();
@@ -216,10 +219,11 @@ async function handleFaceAnalysis(req, res) {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6Lf5yHyYsWo0YwoEupOjPKGIAISLiEgfNmFxVtiX1nt7Q';
 
-    // Nếu chưa cấu hình API Key, sử dụng bộ giải mã nhân trắc học sinh động để người dùng trải nghiệm ngay
+    // Kiểm tra khóa xác thực
     if (!apiKey) {
+      console.warn('Cảnh báo: Chưa cấu hình khóa xác thực cho mô hình.');
       const fallbackData = generateFallbackAnalysis(metrics);
       return res.json({
         success: true,
@@ -230,7 +234,7 @@ async function handleFaceAnalysis(req, res) {
         recommended_glasses: fallbackData.recommended_glasses,
         data: fallbackData,
         isDemo: true,
-        notice: 'Hệ thống đang hiển thị kết quả thử nghiệm theo thông số hình học. Hãy thêm khóa GEMINI_API_KEY vào tệp backend/.env để kích hoạt kết nối AI Gemini đầy đủ.'
+        notice: 'Hệ thống đang hiển thị kết quả thử nghiệm theo thông số hình học. Hãy cấu hình khóa xác thực để kích hoạt trí tuệ nhân tạo.'
       });
     }
 
@@ -249,25 +253,34 @@ Dưới đây là các thông số hình học được đo đạc chính xác t
 `;
     }
 
-    const promptText = `Dựa vào ảnh chụp và số liệu tỷ lệ đính kèm:
+    const promptText = `Bạn hãy quan sát thật kỹ bức ảnh chân dung cụ thể này (nhận diện rõ giới tính, độ tuổi ước tính, chi tiết ngũ quan, khung xương, ánh mắt, nụ cười và sắc da thực tế) kết hợp với số liệu đo đạc đính kèm:
 ${metricsContext}
 
-Hãy thực hiện các yêu cầu phân tích chuyên sâu sau:
-1. Phân loại khuôn mặt này thuộc hệ động vật nào (vibe_type: ví dụ Hệ Mèo sắc sảo quyến rũ, Hệ Cún thân thiện ngọt ngào, Hệ Hươu thanh tao thoát tục, Hệ Cáo cá tính sắc nét, Hệ Thỏ trong trẻo dịu dàng...).
-2. Xác định dáng mắt chủ đạo (eye_shape: ví dụ Dáng mắt hạnh nhân, Dáng mắt phượng kiêu kỳ, Dáng mắt cún tròn to hiền hòa...).
-3. Đánh giá sắc tố da cá nhân Personal Color (skin_tone: Tone da ấm hay Tone da lạnh, thuộc bảng màu mùa nào như Xuân ấm, Hạ mát, Thu trầm, Đông lạnh và gam màu trang phục/trang điểm tôn da nhất).
-4. Đề xuất đúng 3 kiểu tóc phù hợp nhất (recommended_hairstyles) để tôn vinh đường nét và khắc phục nhược điểm dáng mặt.
-5. Đề xuất hình dáng gọng kính phù hợp nhất (recommended_glasses) để cân đối tỷ lệ khuôn mặt.
-6. Đánh giá chi tiết ngũ quan (mắt, mũi, môi, hàm), độ hài hòa tổng thể (thang điểm 10) và lời đúc kết.
+YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUYỆT ĐỐI KHÔNG DÙNG VĂN MẪU HOẶC NỘI DUNG LẶP LẠI):
+1. Hệ động vật diện mạo (vibe_type): Quan sát thần thái và nét mặt trong ảnh để phân loại chính xác vào hệ khí chất động vật phù hợp (ví dụ: Hệ Mèo kiêu kỳ sắc sảo, Hệ Cún ngọt ngào thân thiện, Hệ Cáo thông minh cuốn hút, Hệ Hươu thanh thuần thoát tục, Hệ Thỏ trong trẻo dịu dàng, Hệ Sói bí ẩn cá tính, Hệ Báo sắc bén mạnh mẽ, Hệ Gấu ấm áp vững chãi...). Nêu rõ lý do cụ thể vì sao đường nét của gương mặt này tạo nên khí chất đó.
+2. Dáng mắt chủ đạo (eye_shape): Nhận xét chính xác dáng mắt trong ảnh (mắt hạnh nhân, mắt phượng, mắt cún tròn, mắt một mí cá tính, mắt hai mí sâu, đuôi mắt xếch hoặc đuôi mắt cụp, ánh nhìn tươi sáng hay sâu lắng).
+3. Sắc tố da cá nhân Personal Color (skin_tone): Nhìn màu da, sắc tố môi, màu mắt và tóc trong ảnh để xác định tone ấm (Warm Spring / Warm Autumn) hay tone lạnh (Cool Summer / Cool Winter), đề xuất cụ thể các gam màu trang phục tôn da nhất.
+4. Đề xuất đúng 3 kiểu tóc phù hợp nhất (recommended_hairstyles): Gợi ý 3 kiểu tóc chuẩn xác phù hợp với giới tính và đường nét khuôn mặt của người trong ảnh, nêu rõ lý do kiểu tóc đó giúp tôn ưu điểm hoặc cân đối dáng mặt.
+5. Đề xuất hình dáng gọng kính phù hợp (recommended_glasses): Gợi ý dáng gọng kính (oval, vuông, chữ nhật, mắt mèo, tròn thanh mảnh, gọng phi công...) phù hợp nhất với gò má và xương hàm trong ảnh.
+6. Đánh giá chi tiết ngũ quan (featuresAnalysis):
+   - eyes: Nhận xét cụ thể ưu điểm và thần thái đôi mắt của người trong ảnh.
+   - nose: Nhận xét dáng mũi, sống mũi và tỷ lệ mũi của người trong ảnh.
+   - lips: Nhận xét khuôn miệng, dáng môi và nụ cười của người trong ảnh.
+   - jawline: Nhận xét đường viền xương hàm và độ thon gọn cằm của người trong ảnh.
+   - verticalProportions: Nhận xét tỷ lệ ba tầng mặt (trán, mũi, cằm) theo số liệu đo đạc thực tế.
+   - horizontalProportions: Nhận xét tỷ lệ bề ngang và khoảng cách hai mắt theo số liệu thực tế.
+   - symmetry: Nhận xét mức độ cân xứng hai bên mặt theo số liệu thực tế.
+7. Lời đúc kết diện mạo (summary): Đúc kết 2-3 câu tinh tế, tôn vinh nét đẹp riêng biệt và sức hút tự nhiên của người trong ảnh.
 
-Quy định bắt buộc về ngôn ngữ và nội dung:
-- BẮT BUỘC: Toàn bộ nội dung phân tích trong các trường JSON phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH VÀ NGUYÊN ÂM TIẾNG VIỆT (sắc, huyền, hỏi, ngã, nặng, ă, â, ê, ô, ơ, ư, đ).
-- TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG ĐỂ MẤT DẤU (ví dụ: bắt buộc viết 'Hệ Mèo sắc sảo', 'Mặt trái xoan', 'Dáng mắt hạnh nhân', 'Tone da ấm', cấm viết 'He Meo', 'Mat hanh nhan', 'Tone da am', 'Trai xoan').
-- Sử dụng tiếng Việt chuẩn mực, từ ngữ chuyên nghiệp, lịch sự, tôn trọng người dùng.
-- Tuyệt đối không sử dụng bất kỳ biểu tượng cảm xúc (emoji hoặc icon) nào trong toàn bộ văn bản phản hồi.`;
+QUY ĐỊNH BẮT BUỘC:
+- BẮT BUỘC toàn bộ nội dung phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH (sắc, huyền, hỏi, ngã, nặng) và nguyên âm có dấu (ă, â, ê, ô, ơ, ư, đ).
+- TUYỆT ĐỐI KHÔNG sử dụng văn mẫu chung chung. Mỗi bức ảnh phải có nhận định khác biệt, phù hợp với gương mặt đó.
+- TUYỆT ĐỐI KHÔNG sử dụng bất kỳ biểu tượng cảm xúc (emoji hoặc icon) nào trong toàn bộ văn bản phản hồi.`;
 
     const generateConfig = {
-      systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. BẮT BUỘC: Mọi nhận định, mô tả và nội dung trả về phải được viết bằng TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, chuẩn ngữ pháp, dấu thanh và chính tả tiếng Việt. TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG ĐỂ MẤT DẤU (ví dụ phải viết: Hệ Mèo sắc sảo, Mặt trái xoan, Dáng mắt hạnh nhân, Tone ấm, không được viết He Meo, Trai xoan, Mat hanh nhan, Tone am).',
+      temperature: 0.4,
+      maxOutputTokens: 1200,
+      systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. BẮT BUỘC: Mọi nhận định, mô tả và nội dung trả về phải được viết bằng TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, chuẩn ngữ pháp, dấu thanh và chính tả tiếng Việt. TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG DÙNG VĂN MẪU RẬP KHUÔN, phải quan sát ảnh thật kỹ để phân tích chính xác từng khuôn mặt riêng biệt.',
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -374,9 +387,9 @@ Quy định bắt buộc về ngôn ngữ và nội dung:
       });
     } catch (primaryErr) {
       console.warn('Chuyển đổi sang model kế tiếp do:', primaryErr.message);
-      // Phương án dự phòng với gemini-3.8-flash
+      // Phương án dự phòng với gemini-3.5-flash
       response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+        model: 'gemini-3.5-flash',
         contents: [
           {
             inlineData: {
