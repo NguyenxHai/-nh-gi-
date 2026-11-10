@@ -400,8 +400,8 @@ function drawLandmarksOverlay(metrics, width, height) {
     ctx.lineTo(pts.chinBottom.x, pts.chinBottom.y + 15);
     ctx.stroke();
 
-    // Vẽ các đường gióng tỷ lệ chiều dọc
-    ctx.strokeStyle = 'rgba(250, 204, 21, 0.65)';
+    // Vẽ các đường gióng tỷ lệ chiều dọc màu Neon Tím
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.75)';
     ctx.setLineDash([]);
     const linesY = [pts.foreheadTop.y, pts.glabella.y, pts.subnasale.y, pts.chinBottom.y];
     linesY.forEach(y => {
@@ -411,13 +411,16 @@ function drawLandmarksOverlay(metrics, width, height) {
         ctx.stroke();
     });
 
-    // Vẽ các điểm mốc quan trọng
-    ctx.fillStyle = '#38bdf8';
+    // Vẽ các điểm mốc quan trọng màu Neon Cyan
+    ctx.fillStyle = '#00f2fe';
+    ctx.shadowColor = '#00f2fe';
+    ctx.shadowBlur = 8;
     Object.values(pts).forEach(point => {
         ctx.beginPath();
-        ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+        ctx.arc(point.x, point.y, 3.5, 0, 2 * Math.PI);
         ctx.fill();
     });
+    ctx.shadowBlur = 0;
     ctx.restore();
 }
 

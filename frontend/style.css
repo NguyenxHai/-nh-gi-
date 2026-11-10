@@ -1,26 +1,31 @@
 :root {
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary-color: #64748b;
-    --secondary-hover: #475569;
-    --accent-color: #0f172a;
-    --accent-hover: #1e293b;
-    --border-color: #e2e8f0;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --success-color: #10b981;
-    --warning-bg: #fffbeb;
-    --warning-border: #fef3c7;
-    --warning-text: #b45309;
-    --radius-lg: 16px;
-    --radius-md: 10px;
-    --radius-sm: 6px;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+    --bg-color: #0B0F19;
+    --card-bg: rgba(17, 24, 39, 0.72);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-border-glow: rgba(139, 92, 246, 0.3);
+    
+    /* Màu Neon chủ đạo */
+    --neon-cyan: #00f2fe;
+    --neon-cyan-bright: #38bdf8;
+    --neon-cyan-glow: rgba(6, 182, 212, 0.4);
+    --neon-purple: #8b5cf6;
+    --neon-purple-bright: #a855f7;
+    --neon-purple-glow: rgba(139, 92, 246, 0.4);
+    --neon-gradient: linear-gradient(135deg, #8b5cf6 0%, #00f2fe 100%);
+    --neon-gradient-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 242, 254, 0.15) 100%);
+
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: rgba(255, 255, 255, 0.08);
+    
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+    --shadow-neon-cyan: 0 0 20px rgba(6, 182, 212, 0.35);
+    --shadow-neon-purple: 0 0 25px rgba(139, 92, 246, 0.4);
 }
 
 * {
@@ -30,11 +35,17 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg-color);
+    background-image: 
+        radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 85% 25%, rgba(0, 242, 254, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+    background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.6;
-    padding: 32px 16px;
+    padding: 36px 16px;
+    min-height: 100vh;
 }
 
 .container {
@@ -44,53 +55,64 @@ body {
 
 .app-header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
 .app-title {
-    font-size: 2rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.3rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #ffffff 30%, #c084fc 70%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin-bottom: 8px;
+    text-shadow: 0 0 30px rgba(168, 85, 247, 0.25);
 }
 
 .app-subtitle {
     font-size: 1rem;
     color: var(--text-secondary);
+    font-weight: 400;
 }
 
+/* Thanh chuyển đổi phương thức đầu vào */
 .mode-tabs {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .tab-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 10px 20px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-color);
-    background-color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.92rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 }
 
 .tab-btn:hover {
     color: var(--text-primary);
-    border-color: var(--primary-color);
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
 }
 
 .tab-btn.active {
-    background-color: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(6, 182, 212, 0.25) 100%);
+    color: var(--neon-cyan-bright);
+    border-color: var(--neon-cyan-bright);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.35);
 }
 
 .main-content {
@@ -99,16 +121,30 @@ body {
     gap: 24px;
 }
 
-/* Khu vực Camera */
+/* Khu vực Camera Glassmorphism */
 .camera-section {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
     padding: 24px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-glass);
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.camera-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.5), rgba(6, 182, 212, 0.5), transparent);
 }
 
 .camera-container {
@@ -116,10 +152,11 @@ body {
     width: 100%;
     max-width: 560px;
     aspect-ratio: 4 / 3;
-    background-color: #000000;
+    background-color: #030712;
     border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0, 0, 0, 0.9);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,17 +192,18 @@ body {
 .face-guide-oval {
     width: 220px;
     height: 290px;
-    border: 2px dashed rgba(255, 255, 255, 0.45);
+    border: 2px dashed rgba(56, 189, 248, 0.65);
     border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.25), inset 0 0 15px rgba(139, 92, 246, 0.2);
 }
 
-/* Hiệu ứng tia quét tia laser trên ảnh khuôn mặt */
+/* Hiệu ứng tia quét laser Neon */
 .scanner-overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
     overflow: hidden;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, rgba(15, 23, 42, 0.3) 100%);
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(11, 15, 25, 0.5) 100%);
     border-radius: var(--radius-md);
     z-index: 10;
 }
@@ -175,8 +213,8 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: #38bdf8;
-    box-shadow: 0 0 14px 4px rgba(56, 189, 248, 0.85), 0 0 28px 8px rgba(37, 99, 235, 0.5);
+    background: #00f2fe;
+    box-shadow: 0 0 16px 4px #00f2fe, 0 0 30px 8px #8b5cf6;
     animation: scanMotion 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 }
 
@@ -186,22 +224,22 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 48px;
-    background: linear-gradient(180deg, rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.25) 100%);
+    height: 50px;
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0) 0%, rgba(0, 242, 254, 0.3) 100%);
     pointer-events: none;
 }
 
 @keyframes scanMotion {
     0% {
         top: 2%;
-        opacity: 0.7;
+        opacity: 0.75;
     }
     50% {
         opacity: 1;
     }
     100% {
         top: 96%;
-        opacity: 0.7;
+        opacity: 0.75;
     }
 }
 
@@ -222,27 +260,31 @@ body {
 
 /* Khu vực tải tệp ảnh */
 .upload-section {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
     padding: 24px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-glass);
 }
 
 .drop-zone {
-    border: 2px dashed var(--border-color);
+    border: 2px dashed rgba(139, 92, 246, 0.35);
     border-radius: var(--radius-md);
     padding: 40px 20px;
     text-align: center;
     cursor: pointer;
-    background-color: #fafafa;
+    background: rgba(11, 15, 25, 0.5);
     position: relative;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: all 0.25s ease;
 }
 
+.drop-zone:hover,
 .drop-zone.drag-over {
-    border-color: var(--primary-color);
-    background-color: #eff6ff;
+    border-color: var(--neon-cyan-bright);
+    background: rgba(6, 182, 212, 0.08);
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.2);
 }
 
 .file-input {
@@ -257,7 +299,8 @@ body {
 }
 
 .drop-title {
-    font-size: 1.1rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem;
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -286,7 +329,8 @@ body {
     max-height: 360px;
     border-radius: var(--radius-md);
     object-fit: cover;
-    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
     display: block;
 }
 
@@ -296,18 +340,19 @@ body {
     justify-content: center;
 }
 
-/* Nút bấm */
+/* Nút bấm hiệu ứng Neon */
 .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px;
+    padding: 11px 22px;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
     font-weight: 600;
     border-radius: var(--radius-sm);
     border: none;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: all 0.25s ease;
 }
 
 .btn:active {
@@ -315,38 +360,50 @@ body {
 }
 
 .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none !important;
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 18px rgba(99, 102, 241, 0.35);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: var(--primary-hover);
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 0 28px rgba(139, 92, 246, 0.55);
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
-    color: #ffffff;
+    background: rgba(30, 41, 59, 0.7);
+    color: #e2e8f0;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    backdrop-filter: blur(8px);
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background-color: var(--secondary-hover);
+    background: rgba(51, 65, 85, 0.85);
+    border-color: rgba(168, 85, 247, 0.6);
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.3);
 }
 
 .btn-accent {
-    background-color: var(--accent-color);
-    color: #ffffff;
+    background: var(--neon-gradient);
+    color: #0b0f19;
+    font-weight: 700;
     padding: 12px 28px;
     font-size: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.5), 0 0 35px rgba(0, 242, 254, 0.35);
 }
 
 .btn-accent:hover:not(:disabled) {
-    background-color: var(--accent-hover);
+    box-shadow: 0 0 35px rgba(139, 92, 246, 0.75), 0 0 45px rgba(0, 242, 254, 0.55);
+    filter: brightness(1.08);
 }
 
 .btn-icon {
@@ -354,36 +411,54 @@ body {
     vertical-align: middle;
 }
 
-/* Kết quả phân tích */
+/* Kết quả phân tích Glassmorphism */
 .result-section {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
+    padding: 28px 24px;
+    box-shadow: var(--shadow-glass);
+    position: relative;
+}
+
+.result-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    right: 15%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 242, 254, 0.5), rgba(139, 92, 246, 0.5), transparent);
 }
 
 .result-title {
-    font-size: 1.35rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.45rem;
     font-weight: 700;
     margin-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+    background: linear-gradient(135deg, #ffffff 40%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-/* Thông báo kiểm tra chất lượng ảnh */
+/* Cảnh báo kiểm tra chất lượng ảnh */
 .warning-box {
-    background-color: #fff7ed;
-    border: 1px solid #ffedd5;
-    color: #c2410c;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
     padding: 14px 18px;
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
     margin-bottom: 20px;
     line-height: 1.6;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
 }
 
-/* Khối thông số đo lường */
+/* Khối thông số đo lường hình học */
 .metrics-container {
     display: grid;
     grid-template-columns: 1fr;
@@ -392,10 +467,16 @@ body {
 }
 
 .metric-card {
-    background-color: #f8fafc;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.22);
     border-radius: var(--radius-md);
     padding: 18px 20px;
+    transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+    border-color: rgba(0, 242, 254, 0.35);
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.12);
 }
 
 .metric-header {
@@ -406,15 +487,18 @@ body {
 }
 
 .metric-label {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .metric-value {
-    font-size: 1.05rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: var(--neon-cyan-bright);
+    text-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
 }
 
 .ratio-bars-container {
@@ -439,25 +523,28 @@ body {
 .bar-track {
     flex: 1;
     height: 10px;
-    background-color: #e2e8f0;
+    background-color: rgba(30, 41, 59, 0.8);
     border-radius: 5px;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .bar-fill {
     height: 100%;
     width: 0%;
-    background-color: var(--primary-color);
+    background: var(--neon-gradient);
     border-radius: 5px;
     transition: width 0.6s ease;
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
 }
 
 .bar-percent {
-    width: 45px;
+    width: 48px;
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
     text-align: right;
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 .single-progress-wrapper {
@@ -483,12 +570,13 @@ body {
 }
 
 .spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(139, 92, 246, 0.2);
+    border-top-color: var(--neon-cyan-bright);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.4);
 }
 
 @keyframes spin {
@@ -498,8 +586,10 @@ body {
 }
 
 .loading-text {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
-    color: var(--text-secondary);
+    color: var(--neon-cyan-bright);
+    text-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
 }
 
 /* Định dạng nội dung phân tích cấu trúc trực quan thành các Cards */
@@ -518,21 +608,25 @@ body {
     gap: 4px;
     font-size: 0.92rem;
     line-height: 1.6;
+    backdrop-filter: blur(10px);
 }
 
 .api-notice-banner.warning-notice {
-    background-color: #fffbeb;
-    border: 1px solid #fef3c7;
-    color: #92400e;
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fde68a;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
 }
 
 .api-notice-banner.success-notice {
-    background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #6ee7b7;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
 }
 
 .banner-title {
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
     font-size: 0.95rem;
 }
@@ -549,44 +643,55 @@ body {
 }
 
 .vibe-card {
-    background: #f8fafc;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.25);
     border-radius: var(--radius-md);
-    padding: 18px 20px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    transition: all 0.25s ease;
+}
+
+.vibe-card:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
 }
 
 .vibe-card.highlight-vibe {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border-color: #bbf7d0;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+    border: 1px solid rgba(0, 242, 254, 0.45);
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(139, 92, 246, 0.15);
 }
 
 .vibe-card.highlight-vibe .vibe-label {
-    color: #15803d;
+    color: var(--neon-cyan-bright);
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 .vibe-label {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--neon-purple-bright);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
 }
 
 .vibe-main-text {
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: #166534;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #ffffff;
     line-height: 1.4;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
 }
 
 .vibe-sub-text {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 0.98rem;
+    font-weight: 500;
     color: var(--text-primary);
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 /* Thẻ tổng quan và điểm số hài hòa */
@@ -597,19 +702,23 @@ body {
 }
 
 .score-card {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #bfdbfe;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(6, 182, 212, 0.18) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.35);
     border-radius: var(--radius-md);
-    padding: 20px;
+    padding: 22px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.15);
 }
 
 .score-title {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #1e40af;
+    color: var(--neon-cyan-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .score-display-wrapper {
@@ -619,37 +728,44 @@ body {
 }
 
 .score-number {
-    font-size: 2.2rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.6rem;
     font-weight: 800;
-    color: #1d4ed8;
+    background: var(--neon-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     line-height: 1;
+    filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.4));
 }
 
 .score-max {
-    font-size: 1.1rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem;
     font-weight: 600;
-    color: #60a5fa;
+    color: var(--text-muted);
 }
 
 .score-track {
     height: 12px;
-    background-color: #bfdbfe;
+    background-color: rgba(30, 41, 59, 0.85);
     border-radius: 6px;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .score-fill {
     height: 100%;
-    background-color: #2563eb;
+    background: var(--neon-gradient);
     border-radius: 6px;
     transition: width 1s ease;
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
 }
 
 .shape-card {
-    background: #f8fafc;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.25);
     border-radius: var(--radius-md);
-    padding: 20px;
+    padding: 22px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -657,15 +773,20 @@ body {
 }
 
 .shape-title {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .shape-value {
-    font-size: 1.5rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: var(--accent-color);
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
 }
 
 /* Phần đề xuất 3 kiểu tóc */
@@ -681,25 +802,34 @@ body {
 }
 
 .style-item-card {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.22);
     border-radius: var(--radius-md);
-    padding: 16px 18px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-glass);
+    transition: all 0.25s ease;
+}
+
+.style-item-card:hover {
+    border-color: rgba(0, 242, 254, 0.45);
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.18);
 }
 
 .style-item-badge {
     align-self: flex-start;
-    background-color: #eff6ff;
-    color: var(--primary-color);
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--neon-purple-bright);
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.8rem;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 4px 12px;
     border-radius: 20px;
-    border: 1px solid #bfdbfe;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
 }
 
 .style-item-desc {
@@ -715,10 +845,11 @@ body {
 }
 
 .glasses-card {
-    background-color: #f8fafc;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(6, 182, 212, 0.25);
     border-radius: var(--radius-md);
-    padding: 18px 20px;
+    padding: 20px;
+    box-shadow: var(--shadow-glass);
 }
 
 .glasses-desc {
@@ -729,10 +860,24 @@ body {
 
 /* Lưới thẻ phân tích từng bộ phận ngũ quan */
 .parts-section-title {
-    font-size: 1.15rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.parts-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: var(--neon-gradient);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(0, 242, 254, 0.6);
 }
 
 .parts-grid {
@@ -742,94 +887,69 @@ body {
 }
 
 .part-card {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.part-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
-}
-
-.part-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 6px;
-}
-
-.part-desc {
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    line-height: 1.6;
-}
-
-/* Lưới thẻ tư vấn phong cách */
-.styling-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 14px;
-}
-
-.styling-card {
-    background-color: #f8fafc;
-    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: var(--radius-md);
     padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    transition: all 0.25s ease;
 }
 
-.styling-card-title {
+.part-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(6, 182, 212, 0.4);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+.part-title {
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--accent-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 6px;
+    color: var(--neon-cyan-bright);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
 }
 
-.styling-card-desc {
+.part-desc {
     font-size: 0.9rem;
-    color: var(--text-primary);
-    line-height: 1.6;
+    color: var(--text-secondary);
+    line-height: 1.65;
 }
 
-/* Thẻ tổng kết */
+/* Thẻ tổng kết diện mạo */
 .summary-card {
-    background-color: #f8fafc;
-    border-left: 4px solid var(--primary-color);
-    border-top: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, 0.65);
+    border-left: 4px solid var(--neon-purple);
+    border-top: 1px solid var(--card-border);
+    border-right: 1px solid var(--card-border);
+    border-bottom: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
-    padding: 18px 20px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow-glass);
 }
 
 .summary-title {
-    font-size: 1.05rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #ffffff;
     margin-bottom: 8px;
 }
 
 .summary-text {
     font-size: 0.95rem;
     color: var(--text-secondary);
-    line-height: 1.7;
+    line-height: 1.75;
 }
 
 .error-message {
-    color: #dc2626;
-    background-color: #fee2e2;
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
     padding: 14px 18px;
     border-radius: var(--radius-sm);
     font-size: 0.95rem;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
 }
