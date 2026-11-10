@@ -1,17 +1,33 @@
 import {
     FaceLandmarker,
-    FilesetResolver
+    FilesetResolver,
+    DrawingUtils
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.mjs";
 
 // Khai báo các thành phần giao diện
 const videoElement = document.getElementById('videoElement');
+const arCanvas = document.getElementById('arCanvas');
 const canvasElement = document.getElementById('canvasElement');
 const captureAnalyzeBtn = document.getElementById('captureAnalyzeBtn');
 const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 const cameraNotice = document.getElementById('cameraNotice');
 const cameraGuide = document.getElementById('cameraGuide');
+const faceGuideOval = document.getElementById('faceGuideOval');
+const guideText = document.getElementById('guideText');
 const cameraScanner = document.getElementById('cameraScanner');
 const uploadScanner = document.getElementById('uploadScanner');
+const cameraScanningStatus = document.getElementById('cameraScanningStatus');
+const cameraScanningText = document.getElementById('cameraScanningText');
+const uploadScanningStatus = document.getElementById('uploadScanningStatus');
+const uploadScanningText = document.getElementById('uploadScanningText');
+
+// Các thành phần đèn báo trạng thái trực quan HUD
+const hudLightingDot = document.getElementById('hudLightingDot');
+const hudLightingVal = document.getElementById('hudLightingVal');
+const hudAngleDot = document.getElementById('hudAngleDot');
+const hudAngleVal = document.getElementById('hudAngleVal');
+const hudDistanceDot = document.getElementById('hudDistanceDot');
+const hudDistanceVal = document.getElementById('hudDistanceVal');
 
 const cameraTabBtn = document.getElementById('cameraTabBtn');
 const uploadTabBtn = document.getElementById('uploadTabBtn');
@@ -50,11 +66,19 @@ let mediaStream = null;
 let currentFileBase64 = null;
 let currentMimeType = 'image/jpeg';
 let faceLandmarker = null;
+let drawingUtils = null;
 
-// Khởi tạo công cụ nhận diện điểm mốc khuôn mặt MediaPipe
+// Biến điều khiển vòng lặp AR thời gian thực
+let arAnimationId = null;
+let isARActive = false;
+let lastVideoTime = -1;
+let frameCounter = 0;
+let cachedLuminanceStatus = { level: 'good', text: 'Tốt' };
+
+// Khởi tạo công cụ nhận diện điểm mốc khuôn mặt MediaPipe với chế độ VIDEO theo thời gian thực
 async function initFaceLandmarker() {
     try {
-        cameraNotice.textContent = 'Đang tải bộ mô hình nhận diện điểm mốc...';
+        cameraNotice.textContent = 'Đang tải bộ mô hình nhận diện điểm mốc AR...';
         const vision = await FilesetResolver.forVisionTasks(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
         );
@@ -66,7 +90,7 @@ async function initFaceLandmarker() {
                     delegate: "GPU"
                 },
                 outputFaceBlendshapes: false,
-                runningMode: "IMAGE",
+                runningMode: "VIDEO",
                 numFaces: 1
             });
         } catch (gpuError) {
@@ -76,15 +100,204 @@ async function initFaceLandmarker() {
                     delegate: "CPU"
                 },
                 outputFaceBlendshapes: false,
-                runningMode: "IMAGE",
+                runningMode: "VIDEO",
                 numFaces: 1
             });
         }
 
-        cameraNotice.textContent = 'Hệ thống đã sẵn sàng. Hãy căn chỉnh khuôn mặt vào giữa khung hình.';
+        const arCtx = arCanvas.getContext('2d');
+        drawingUtils = new DrawingUtils(arCtx);
+
+        cameraNotice.textContent = 'Hệ thống AR đã sẵn sàng. Hãy căn chỉnh khuôn mặt vào giữa khung hình.';
         captureAnalyzeBtn.disabled = false;
+
+        // Nếu camera đã bật, bắt đầu luồng vẽ AR ngay
+        if (mediaStream && !isARActive) {
+            startLiveARLoop();
+        }
     } catch (err) {
         cameraNotice.textContent = 'Không thể nạp mô hình nhận diện điểm mốc. Vui lòng tải lại trang hoặc kiểm tra kết nối mạng.';
+    }
+}
+
+// Cập nhật đèn trạng thái HUD và khung hình Oval
+function updateHudLighting(level, text) {
+    if (hudLightingDot) hudLightingDot.className = 'hud-dot ' + level;
+    if (hudLightingVal) hudLightingVal.textContent = text;
+}
+
+function updateHudAngle(level, text) {
+    if (hudAngleDot) hudAngleDot.className = 'hud-dot ' + level;
+    if (hudAngleVal) hudAngleVal.textContent = text;
+}
+
+function updateHudDistance(level, text) {
+    if (hudDistanceDot) hudDistanceDot.className = 'hud-dot ' + level;
+    if (hudDistanceVal) hudDistanceVal.textContent = text;
+}
+
+function setOvalMatched(matched, text) {
+    if (!faceGuideOval) return;
+    if (matched) {
+        faceGuideOval.classList.add('matched');
+    } else {
+        faceGuideOval.classList.remove('matched');
+    }
+    if (guideText && text) {
+        guideText.textContent = text;
+    }
+}
+
+// Đánh giá và cập nhật trạng thái khuôn mặt thời gian thực
+function evaluateRealtimeFace(landmarks, width, height) {
+    const noseTip = landmarks[1];
+    const subnasale = landmarks[2];
+    const eyeLeftInner = landmarks[362];
+    const eyeRightInner = landmarks[133];
+    const jawRight = landmarks[234];
+    const jawLeft = landmarks[454];
+
+    // 1. Tính toán độ nghiêng góc mặt (Yaw)
+    const midEyeX = (eyeLeftInner.x + eyeRightInner.x) / 2;
+    const eyeDist = Math.abs(eyeLeftInner.x - eyeRightInner.x);
+    const yawOffset = Math.abs(noseTip.x - midEyeX);
+    const yawRatio = eyeDist > 0 ? (yawOffset / eyeDist) : 0;
+
+    let isAngleGood = false;
+    if (yawRatio < 0.16) {
+        updateHudAngle('good', 'Chính diện');
+        isAngleGood = true;
+    } else {
+        updateHudAngle('warning', 'Hơi nghiêng');
+        isAngleGood = false;
+    }
+
+    // 2. Tính toán khoảng cách (Face Scale)
+    const faceWidthNorm = Math.abs(jawLeft.x - jawRight.x);
+    let isDistanceGood = false;
+
+    if (faceWidthNorm < 0.22) {
+        updateHudDistance('warning', 'Quá xa');
+        setOvalMatched(false, 'Tiến lại gần hơn');
+    } else if (faceWidthNorm > 0.60) {
+        updateHudDistance('warning', 'Quá gần');
+        setOvalMatched(false, 'Lùi ra xa một chút');
+    } else {
+        updateHudDistance('good', 'Chuẩn xác');
+        isDistanceGood = true;
+        if (isAngleGood) {
+            setOvalMatched(true, 'Khung hình hoàn hảo');
+        } else {
+            setOvalMatched(false, 'Giữ thẳng mặt');
+        }
+    }
+}
+
+function resetRealtimeStatus() {
+    updateHudAngle('warning', 'Chưa có mặt');
+    updateHudDistance('warning', 'Đang chờ mặt');
+    setOvalMatched(false, 'Đưa khuôn mặt vào khung hình');
+}
+
+// Vòng lặp vẽ lưới AR và điểm mốc theo thời gian thực (60 FPS)
+function startLiveARLoop() {
+    isARActive = true;
+
+    function renderARFrame() {
+        if (!isARActive || !mediaStream) return;
+
+        if (videoElement && videoElement.readyState >= 2) {
+            if (videoElement.currentTime !== lastVideoTime) {
+                lastVideoTime = videoElement.currentTime;
+                frameCounter++;
+
+                const width = videoElement.videoWidth || 640;
+                const height = videoElement.videoHeight || 480;
+
+                if (arCanvas.width !== width || arCanvas.height !== height) {
+                    arCanvas.width = width;
+                    arCanvas.height = height;
+                }
+
+                const arCtx = arCanvas.getContext('2d');
+                arCtx.clearRect(0, 0, width, height);
+
+                // Đo độ sáng định kỳ mỗi 20 khung hình để duy trì hiệu năng mượt mà
+                if (frameCounter % 20 === 0) {
+                    const lum = checkImageLuminance(videoElement);
+                    if (lum < 38) {
+                        cachedLuminanceStatus = { level: 'danger', text: 'Thiếu sáng' };
+                    } else if (lum > 240) {
+                        cachedLuminanceStatus = { level: 'warning', text: 'Quá chói' };
+                    } else {
+                        cachedLuminanceStatus = { level: 'good', text: 'Tốt' };
+                    }
+                    updateHudLighting(cachedLuminanceStatus.level, cachedLuminanceStatus.text);
+                }
+
+                // Nhận diện điểm mốc video thời gian thực với MediaPipe
+                if (faceLandmarker) {
+                    try {
+                        const results = faceLandmarker.detectForVideo(videoElement, performance.now());
+                        if (results && results.faceLandmarks && results.faceLandmarks.length > 0) {
+                            const landmarks = results.faceLandmarks[0];
+
+                            if (drawingUtils) {
+                                // 1. Vẽ các đường viền ngũ quan (mắt, mũi, môi, hàm) màu Neon Cyan
+                                drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_CONTOURS, {
+                                    color: 'rgba(0, 242, 254, 0.42)',
+                                    lineWidth: 1.2
+                                });
+
+                                // 2. Vẽ lưới AR liên kết siêu mảnh màu Neon Tím
+                                drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, {
+                                    color: 'rgba(168, 85, 247, 0.12)',
+                                    lineWidth: 0.6
+                                });
+
+                                // 3. Vẽ các điểm mốc ngũ quan phát sáng Neon
+                                const keyIndices = [1, 2, 10, 33, 61, 133, 152, 168, 234, 263, 291, 362, 454];
+                                arCtx.save();
+                                arCtx.fillStyle = '#00f2fe';
+                                arCtx.shadowColor = '#00f2fe';
+                                arCtx.shadowBlur = 6;
+                                keyIndices.forEach(idx => {
+                                    const pt = landmarks[idx];
+                                    if (pt) {
+                                        arCtx.beginPath();
+                                        arCtx.arc(pt.x * width, pt.y * height, 2.2, 0, 2 * Math.PI);
+                                        arCtx.fill();
+                                    }
+                                });
+                                arCtx.restore();
+                            }
+
+                            evaluateRealtimeFace(landmarks, width, height);
+                        } else {
+                            resetRealtimeStatus();
+                        }
+                    } catch (e) {
+                        // Bỏ qua lỗi khung hình tạm thời nếu có
+                    }
+                }
+            }
+        }
+
+        arAnimationId = requestAnimationFrame(renderARFrame);
+    }
+
+    arAnimationId = requestAnimationFrame(renderARFrame);
+}
+
+function stopLiveARLoop() {
+    isARActive = false;
+    if (arAnimationId) {
+        cancelAnimationFrame(arAnimationId);
+        arAnimationId = null;
+    }
+    if (arCanvas && arCanvas.width && arCanvas.height) {
+        const arCtx = arCanvas.getContext('2d');
+        arCtx.clearRect(0, 0, arCanvas.width, arCanvas.height);
     }
 }
 
@@ -96,6 +309,9 @@ function resetAllStates() {
     warningBox.style.display = 'none';
     warningBox.innerHTML = '';
 
+    // Dừng toàn bộ hiệu ứng quét và chuỗi thông báo
+    stopScanningSequence();
+
     // Xóa nội dung khung hình tĩnh cũ trên canvas
     if (canvasElement.width && canvasElement.height) {
         const ctx = canvasElement.getContext('2d');
@@ -103,12 +319,18 @@ function resetAllStates() {
     }
     canvasElement.style.display = 'none';
 
-    // Hiện lại khung camera động
+    // Hiện lại khung camera động và khung căn chỉnh
     videoElement.style.display = 'block';
     cameraGuide.style.display = 'flex';
+    if (cameraHudStatus) {
+        cameraHudStatus.style.display = 'flex';
+    }
+    faceGuideOval.classList.remove('matched');
+    guideText.textContent = 'Đưa khuôn mặt vào khung hình';
+
     captureAnalyzeBtn.disabled = false;
     currentFileBase64 = null;
-    stopScanningAnimation();
+    resetRealtimeStatus();
 }
 
 // Khởi tạo luồng ghi hình từ webcam kèm xử lý ngoại lệ
@@ -133,8 +355,10 @@ async function startCamera() {
         videoElement.style.display = 'block';
         cameraGuide.style.display = 'flex';
         cameraNotice.textContent = 'Camera đã sẵn sàng. Hãy căn chỉnh khuôn mặt vào giữa khung hình.';
+
         if (faceLandmarker) {
             captureAnalyzeBtn.disabled = false;
+            startLiveARLoop();
         }
     } catch (err) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -150,6 +374,7 @@ async function startCamera() {
 
 // Ngắt luồng ghi hình
 function stopCamera() {
+    stopLiveARLoop();
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
@@ -159,37 +384,94 @@ function stopCamera() {
     }
 }
 
-// Điều khiển hiệu ứng tia quét laser chờ xử lý
-function startScanningAnimation(isCamera) {
+// Danh sách các thông điệp chạy tuần tự trong quá trình phân tích
+const SCANNING_STEPS = [
+    "Đang trích xuất 468 điểm mốc nhân trắc học...",
+    "Đang tính toán tỷ lệ vàng 1/3 và 1/5...",
+    "Gemini AI đang phân tích thần thái và sắc tố da..."
+];
+
+let scanningSequenceTimers = [];
+
+// Bắt đầu chuỗi hiệu ứng quét laser và dòng trạng thái biến đổi liên tục
+function startScanningSequence(isCamera) {
+    stopScanningSequence();
+
     if (isCamera) {
         cameraScanner.style.display = 'block';
+        if (cameraScanningStatus) {
+            cameraScanningStatus.style.display = 'flex';
+        }
     } else {
         uploadScanner.style.display = 'block';
+        if (uploadScanningStatus) {
+            uploadScanningStatus.style.display = 'flex';
+        }
     }
+
+    // Bước 1: Trích xuất 468 điểm mốc
+    updateScanningStatusText(SCANNING_STEPS[0]);
+
+    // Bước 2: Tính toán tỷ lệ vàng 1/3 và 1/5 sau 1.3 giây
+    const timer1 = setTimeout(() => {
+        updateScanningStatusText(SCANNING_STEPS[1]);
+    }, 1300);
+    scanningSequenceTimers.push(timer1);
+
+    // Bước 3: Phân tích thần thái và sắc tố da sau 2.6 giây
+    const timer2 = setTimeout(() => {
+        updateScanningStatusText(SCANNING_STEPS[2]);
+    }, 2600);
+    scanningSequenceTimers.push(timer2);
 }
 
-function stopScanningAnimation() {
-    cameraScanner.style.display = 'none';
-    uploadScanner.style.display = 'none';
+// Cập nhật nội dung hiển thị kèm hiệu ứng chuyển động mượt mà
+function updateScanningStatusText(text) {
+    const textEls = [cameraScanningText, uploadScanningText];
+    textEls.forEach(el => {
+        if (el) {
+            el.classList.remove('text-fade-in');
+            void el.offsetWidth;
+            el.textContent = text;
+            el.classList.add('text-fade-in');
+        }
+    });
+}
+
+// Dừng toàn bộ hiệu ứng quét laser và làm sạch hàng đợi đếm giờ
+function stopScanningSequence() {
+    scanningSequenceTimers.forEach(id => clearTimeout(id));
+    scanningSequenceTimers = [];
+
+    if (cameraScanner) cameraScanner.style.display = 'none';
+    if (uploadScanner) uploadScanner.style.display = 'none';
+    if (cameraScanningStatus) cameraScanningStatus.style.display = 'none';
+    if (uploadScanningStatus) uploadScanningStatus.style.display = 'none';
 }
 
 // Chuyển đổi tab
-cameraTabBtn.addEventListener('click', () => {
+cameraTabBtn.addEventListener('click', async () => {
     resetAllStates();
     cameraTabBtn.classList.add('active');
     uploadTabBtn.classList.remove('active');
     cameraSection.style.display = 'flex';
     uploadSection.style.display = 'none';
+    if (faceLandmarker) {
+        await faceLandmarker.setOptions({ runningMode: "VIDEO" });
+    }
     startCamera();
 });
 
-uploadTabBtn.addEventListener('click', () => {
+uploadTabBtn.addEventListener('click', async () => {
     resetAllStates();
     uploadTabBtn.classList.add('active');
     cameraTabBtn.classList.remove('active');
     cameraSection.style.display = 'none';
     uploadSection.style.display = 'block';
     stopCamera();
+    if (faceLandmarker) {
+        await faceLandmarker.setOptions({ runningMode: "IMAGE" });
+    }
 });
 
 // Bấm nút khởi động lại camera: xóa sạch kết quả cũ và kích hoạt lại luồng ghi hình mới
@@ -212,9 +494,15 @@ function captureFrameAsBase64() {
     // Chuyển bức ảnh thành chuỗi mã hóa Base64
     const base64Data = canvasElement.toDataURL('image/jpeg', 0.92);
 
-    // Tạm dừng hiển thị khung hình tĩnh trên canvas
+    // Tạm dừng hiển thị khung hình tĩnh trên canvas (đóng băng bức ảnh vừa chụp)
     canvasElement.style.display = 'block';
     cameraGuide.style.display = 'none';
+    if (cameraHudStatus) {
+        cameraHudStatus.style.display = 'none';
+    }
+
+    // Tạm ngưng vòng lặp AR khi đang đóng băng khung hình chụp
+    stopLiveARLoop();
 
     return base64Data;
 }
@@ -385,7 +673,7 @@ function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
     };
 }
 
-// Vẽ các đường đo lường và điểm mốc phụ trợ lên khung hình
+// Vẽ các đường đo lường và điểm mốc phụ trợ lên khung hình tĩnh
 function drawLandmarksOverlay(metrics, width, height) {
     const ctx = canvasElement.getContext('2d');
     const pts = metrics.points;
@@ -443,6 +731,12 @@ function renderMetricsDashboard(metrics) {
     symmetryBar.style.width = `${Math.min(100, metrics.overallSymmetry)}%`;
 }
 
+// Chuẩn hóa và bảo đảm dấu tiếng Việt đầy đủ và đúng chuẩn Unicode NFC
+function normalizeVietnamese(text) {
+    if (!text || typeof text !== 'string') return text || '';
+    return text.normalize('NFC');
+}
+
 // Hiển thị kết quả phân tích có cấu trúc dưới dạng thẻ trực quan
 function renderStructuredAnalysis(data, isDemo, notice) {
     const scoreVal = typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5;
@@ -454,14 +748,14 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         statusBannerHtml = `
             <div class="api-notice-banner warning-notice">
                 <span class="banner-title">Thông báo trạng thái phân tích</span>
-                <p class="banner-desc">Hệ thống đang hiển thị kết quả tính toán mô phỏng do tệp cấu hình máy chủ chưa có khóa GEMINI_API_KEY. Vui lòng thêm khóa API vào tệp backend/.env để kích hoạt mô hình Gemini 2.5 Flash phân tích trực tiếp từng bức ảnh.</p>
+                <p class="banner-desc">Hệ thống đang hiển thị kết quả tính toán mô phỏng do tệp cấu hình máy chủ chưa có khóa GEMINI_API_KEY. Vui lòng thêm khóa API vào tệp backend/.env để kích hoạt mô hình Gemini phân tích trực tiếp từng bức ảnh.</p>
             </div>
         `;
     } else {
         statusBannerHtml = `
             <div class="api-notice-banner success-notice">
                 <span class="banner-title">Đã kết nối Gemini API</span>
-                <p class="banner-desc">Kết quả được phân tích trực tiếp từ mô hình trí tuệ nhân tạo Google Gemini 2.5 Flash dựa trên hình ảnh chân dung và các số liệu nhân trắc học.</p>
+                <p class="banner-desc">Kết quả được phân tích trực tiếp từ mô hình trí tuệ nhân tạo Google Gemini dựa trên hình ảnh chân dung và các số liệu nhân trắc học.</p>
             </div>
         `;
     }
@@ -472,7 +766,7 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         hairstylesHtml = data.recommended_hairstyles.map((style, idx) => `
             <div class="style-item-card">
                 <span class="style-item-badge">Kiểu ${idx + 1}</span>
-                <p class="style-item-desc">${style}</p>
+                <p class="style-item-desc">${normalizeVietnamese(style)}</p>
             </div>
         `).join('');
     } else {
@@ -486,15 +780,15 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         <div class="vibe-container-grid">
             <div class="vibe-card highlight-vibe">
                 <span class="vibe-label">Hệ Động Vật Diện Mạo</span>
-                <span class="vibe-main-text">${data.vibe_type || 'Đang xác định'}</span>
+                <span class="vibe-main-text">${normalizeVietnamese(data.vibe_type) || 'Đang xác định'}</span>
             </div>
             <div class="vibe-card">
                 <span class="vibe-label">Dáng Mắt Chủ Đạo</span>
-                <span class="vibe-sub-text">${data.eye_shape || 'Dáng mắt tự nhiên'}</span>
+                <span class="vibe-sub-text">${normalizeVietnamese(data.eye_shape) || 'Dáng mắt tự nhiên'}</span>
             </div>
             <div class="vibe-card">
                 <span class="vibe-label">Sắc Tố Cá Nhân (Personal Color)</span>
-                <span class="vibe-sub-text">${data.skin_tone || 'Tone tự nhiên hài hòa'}</span>
+                <span class="vibe-sub-text">${normalizeVietnamese(data.skin_tone) || 'Tone tự nhiên hài hòa'}</span>
             </div>
         </div>
 
@@ -512,7 +806,7 @@ function renderStructuredAnalysis(data, isDemo, notice) {
             </div>
             <div class="shape-card">
                 <span class="shape-title">Dáng khuôn mặt chủ đạo</span>
-                <span class="shape-value">${data.faceShape || 'Hài hòa cân đối'}</span>
+                <span class="shape-value">${normalizeVietnamese(data.faceShape) || 'Hài hòa cân đối'}</span>
             </div>
         </div>
 
@@ -528,7 +822,7 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         <div class="glasses-section">
             <h3 class="parts-section-title">Hình Dáng Gọng Kính Phù Hợp</h3>
             <div class="glasses-card">
-                <p class="glasses-desc">${data.recommended_glasses || 'Gọng kính thanh mảnh, bo tròn nhẹ nhàng.'}</p>
+                <p class="glasses-desc">${normalizeVietnamese(data.recommended_glasses) || 'Gọng kính thanh mảnh, bo tròn nhẹ nhàng.'}</p>
             </div>
         </div>
 
@@ -538,19 +832,19 @@ function renderStructuredAnalysis(data, isDemo, notice) {
             <div class="parts-grid">
                 <div class="part-card">
                     <span class="part-title">Đôi Mắt và Ánh Nhìn</span>
-                    <p class="part-desc">${data.featuresAnalysis?.eyes || 'Ánh nhìn tươi sáng, đường nét thanh tú.'}</p>
+                    <p class="part-desc">${normalizeVietnamese(data.featuresAnalysis?.eyes) || 'Ánh nhìn tươi sáng, đường nét thanh tú.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Sống Mũi và Tỷ Lệ</span>
-                    <p class="part-desc">${data.featuresAnalysis?.nose || 'Dáng mũi tự nhiên, tạo điểm nhấn cân xứng cho khuôn mặt.'}</p>
+                    <p class="part-desc">${normalizeVietnamese(data.featuresAnalysis?.nose) || 'Dáng mũi tự nhiên, tạo điểm nhấn cân xứng cho khuôn mặt.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Khuôn Miệng và Nụ Cười</span>
-                    <p class="part-desc">${data.featuresAnalysis?.lips || 'Đường viền môi duyên dáng, nụ cười rạng rỡ.'}</p>
+                    <p class="part-desc">${normalizeVietnamese(data.featuresAnalysis?.lips) || 'Đường viền môi duyên dáng, nụ cười rạng rỡ.'}</p>
                 </div>
                 <div class="part-card">
                     <span class="part-title">Xương Hàm và Cằm</span>
-                    <p class="part-desc">${data.featuresAnalysis?.jawline || 'Đường viền hàm thon gọn, cằm cân đối với tổng thể.'}</p>
+                    <p class="part-desc">${normalizeVietnamese(data.featuresAnalysis?.jawline) || 'Đường viền hàm thon gọn, cằm cân đối với tổng thể.'}</p>
                 </div>
             </div>
         </div>
@@ -558,7 +852,7 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         <!-- Lời đúc kết diện mạo -->
         <div class="summary-card">
             <h4 class="summary-title">Lời Đúc Kết Diện Mạo</h4>
-            <p class="summary-text">${data.summary || 'Khuôn mặt mang đường nét thanh tú, hài hòa và thần thái cuốn hút.'}</p>
+            <p class="summary-text">${normalizeVietnamese(data.summary) || 'Khuôn mặt mang đường nét thanh tú, hài hòa và thần thái cuốn hút.'}</p>
         </div>
     `;
     resultBody.style.display = 'block';
@@ -652,6 +946,12 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
         warningBox.textContent = 'Hình ảnh quá tối hoặc môi trường thiếu sáng trầm trọng. Vui lòng bật thêm đèn hoặc đứng ở nơi có nguồn sáng rõ ràng để hệ thống nhận diện chính xác.';
         warningBox.style.display = 'block';
         resultSection.style.display = 'block';
+        if (isFromCamera) {
+            canvasElement.style.display = 'none';
+            cameraGuide.style.display = 'flex';
+            if (cameraHudStatus) cameraHudStatus.style.display = 'flex';
+            startLiveARLoop();
+        }
         return;
     } else if (avgBrightness > 245) {
         warningBox.textContent = 'Hình ảnh bị chói sáng hoặc dư sáng quá mức. Vui lòng điều chỉnh lại hướng nguồn sáng để các đường nét không bị mờ nhạt.';
@@ -661,29 +961,43 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
     captureAnalyzeBtn.disabled = true;
     analyzeUploadBtn.disabled = true;
 
-    resultSection.style.display = 'block';
-    spinnerWrapper.style.display = 'flex';
-    resultBody.style.display = 'none';
+    // Không hiển thị khung kết quả trong thời gian chờ để tập trung vào bức ảnh và dòng trạng thái
+    resultSection.style.display = 'none';
     resultBody.innerHTML = '';
     metricsContainer.style.display = 'none';
 
-    // Bật hiệu ứng tia quét laser chờ xử lý
-    startScanningAnimation(isFromCamera);
+    // Kích hoạt tia laser quét dọc bức ảnh và dòng trạng thái biến đổi liên tục dưới bức ảnh
+    startScanningSequence(isFromCamera);
 
     let calculatedMetrics = null;
 
     // Trích xuất và kiểm tra xem có phát hiện mặt người không
     if (faceLandmarker) {
         try {
-            const detections = faceLandmarker.detect(imageSourceElement);
+            // Đảm bảo chế độ nhận diện ảnh tĩnh nếu là tệp ảnh tải lên
+            if (!isFromCamera) {
+                await faceLandmarker.setOptions({ runningMode: "IMAGE" });
+            }
+
+            const detections = isFromCamera 
+                ? faceLandmarker.detectForVideo(imageSourceElement, performance.now())
+                : faceLandmarker.detect(imageSourceElement);
+
             if (!detections || !detections.faceLandmarks || detections.faceLandmarks.length === 0) {
-                stopScanningAnimation();
-                spinnerWrapper.style.display = 'none';
+                stopScanningSequence();
                 captureAnalyzeBtn.disabled = false;
                 analyzeUploadBtn.disabled = false;
 
                 warningBox.textContent = 'Không tìm thấy khuôn mặt trong hình ảnh. Vui lòng căn chỉnh lại góc nhìn thẳng vào ống kính và bảo đảm khuôn mặt không bị che khuất.';
                 warningBox.style.display = 'block';
+                resultSection.style.display = 'block';
+
+                if (isFromCamera) {
+                    canvasElement.style.display = 'none';
+                    cameraGuide.style.display = 'flex';
+                    if (cameraHudStatus) cameraHudStatus.style.display = 'flex';
+                    startLiveARLoop();
+                }
                 return;
             }
 
@@ -692,9 +1006,8 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
             const height = imageSourceElement.naturalHeight || imageSourceElement.videoHeight || imageSourceElement.height || 480;
 
             calculatedMetrics = extractAndCalculateMetrics(landmarks, width, height, imageSourceElement);
-            renderMetricsDashboard(calculatedMetrics);
 
-            // Nếu nguồn là canvas của camera, vẽ các đường phụ trợ
+            // Nếu nguồn là canvas của camera, vẽ các đường gióng tỷ lệ
             if (imageSourceElement === canvasElement) {
                 drawLandmarksOverlay(calculatedMetrics, width, height);
             }
@@ -703,8 +1016,8 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
         }
     }
 
-    // Thiết lập thời gian quét laser tối thiểu 2.5 giây để tăng trải nghiệm trực quan
-    const minScanTimer = new Promise(resolve => setTimeout(resolve, 2500));
+    // Thiết lập thời gian quét tối thiểu 3.6 giây để người dùng theo dõi trọn vẹn 3 giai đoạn phân tích
+    const minScanTimer = new Promise(resolve => setTimeout(resolve, 3600));
 
     try {
         const fetchPromise = fetch('/api/analyze', {
@@ -719,22 +1032,34 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
             })
         }).then(res => res.json());
 
-        // Đợi đồng thời cả cuộc gọi mạng và hiệu ứng tia quét
+        // Đợi đồng thời cả cuộc gọi mạng và chuỗi thời gian hiển thị thông điệp
         const [resData] = await Promise.all([fetchPromise, minScanTimer]);
+
+        // Dừng tia laser và dòng trạng thái quét
+        stopScanningSequence();
+
+        // Cập nhật các tỷ lệ hình học lên bảng đo đạc
+        if (calculatedMetrics) {
+            renderMetricsDashboard(calculatedMetrics);
+        }
 
         if (resData.success && (resData.data || resData.vibe_type)) {
             const finalData = resData.data || resData;
             renderStructuredAnalysis(finalData, resData.isDemo, resData.notice);
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
             resultBody.innerHTML = `<div class="error-message">${resData.message || 'Không thể thực hiện đánh giá. Vui lòng kiểm tra lại cấu hình hệ thống.'}</div>`;
             resultBody.style.display = 'block';
+            resultSection.style.display = 'block';
         }
     } catch (err) {
+        stopScanningSequence();
         resultBody.innerHTML = '<div class="error-message">Không thể kết nối đến máy chủ xử lý. Vui lòng kiểm tra lại dịch vụ máy chủ.</div>';
         resultBody.style.display = 'block';
+        resultSection.style.display = 'block';
     } finally {
-        stopScanningAnimation();
-        spinnerWrapper.style.display = 'none';
+        stopScanningSequence();
         captureAnalyzeBtn.disabled = false;
         analyzeUploadBtn.disabled = false;
     }

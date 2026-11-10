@@ -21,6 +21,79 @@ app.use(express.static(path.join(__dirname, '../frontend'), {
   }
 }));
 
+// Chuẩn hóa và phục hồi dấu tiếng Việt nếu phản hồi từ mô hình bị thiếu dấu
+function restoreVietnameseAccents(text) {
+  if (typeof text !== 'string') return text;
+  let s = text.normalize('NFC');
+
+  const replacements = [
+    [/\bHe Meo\b/gi, 'Hệ Mèo'],
+    [/\bHe Cun\b/gi, 'Hệ Cún'],
+    [/\bHe Huou\b/gi, 'Hệ Hươu'],
+    [/\bHe Cao\b/gi, 'Hệ Cáo'],
+    [/\bHe Tho\b/gi, 'Hệ Thỏ'],
+    [/\bHe Gau\b/gi, 'Hệ Gấu'],
+    [/\bHe Chim Ung\b/gi, 'Hệ Chim Ưng'],
+    [/\bTrai xoan\b/gi, 'Trái xoan'],
+    [/\bMat tron\b/gi, 'Mặt tròn'],
+    [/\bVuong chu dien\b/gi, 'Vuông chữ điền'],
+    [/\bTrai tim\b/gi, 'Trái tim'],
+    [/\bKim cuong\b/gi, 'Kim cương'],
+    [/\bMat hanh nhan\b/gi, 'Mắt hạnh nhân'],
+    [/\bMat phuong\b/gi, 'Mắt phượng'],
+    [/\bMat cun\b/gi, 'Mắt cún'],
+    [/\bMat mot mi\b/gi, 'Mắt một mí'],
+    [/\bMat hai mi\b/gi, 'Mắt hai mí'],
+    [/\bTone am\b/gi, 'Tone ấm'],
+    [/\bTone lanh\b/gi, 'Tone lạnh'],
+    [/\bDa am\b/gi, 'Da ấm'],
+    [/\bDa lanh\b/gi, 'Da lạnh'],
+    [/\bMua Xuan\b/gi, 'Mùa Xuân'],
+    [/\bMua Ha\b/gi, 'Mùa Hạ'],
+    [/\bMua Thu\b/gi, 'Mùa Thu'],
+    [/\bMua Dong\b/gi, 'Mùa Đông'],
+    [/\bKieu 1\b/gi, 'Kiểu 1'],
+    [/\bKieu 2\b/gi, 'Kiểu 2'],
+    [/\bKieu 3\b/gi, 'Kiểu 3'],
+    [/\bKieu toc\b/gi, 'Kiểu tóc'],
+    [/\bGong kinh\b/gi, 'Gọng kính'],
+    [/\bNu cuoi\b/gi, 'Nụ cười'],
+    [/\bKhuon mieng\b/gi, 'Khuôn miệng'],
+    [/\bSong mui\b/gi, 'Sống mũi'],
+    [/\bXuong ham\b/gi, 'Xương hàm'],
+    [/\bThon gon\b/gi, 'Thon gọn'],
+    [/\bCan doi\b/gi, 'Cân đối'],
+    [/\bHai hoa\b/gi, 'Hài hòa'],
+    [/\bThanh thoat\b/gi, 'Thanh thoát'],
+    [/\bQuyen ru\b/gi, 'Quyến rũ'],
+    [/\bSac sao\b/gi, 'Sắc sảo'],
+    [/\bTuoi sang\b/gi, 'Tươi sáng'],
+    [/\bTrong sang\b/gi, 'Trong sáng']
+  ];
+
+  for (const [re, rep] of replacements) {
+    s = s.replace(re, rep);
+  }
+  return s;
+}
+
+function sanitizeAnalysisObject(obj) {
+  if (typeof obj === 'string') {
+    return restoreVietnameseAccents(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeAnalysisObject);
+  }
+  if (obj && typeof obj === 'object') {
+    const res = {};
+    for (const key of Object.keys(obj)) {
+      res[key] = sanitizeAnalysisObject(obj[key]);
+    }
+    return res;
+  }
+  return obj;
+}
+
 // Tạo kết quả phân tích thử nghiệm sinh động dựa trên số liệu hình học khi chưa cấu hình API Key
 function generateFallbackAnalysis(metrics) {
   const sym = metrics?.overallSymmetry || 92;
@@ -187,42 +260,44 @@ Hãy thực hiện các yêu cầu phân tích chuyên sâu sau:
 5. Đề xuất hình dáng gọng kính phù hợp nhất (recommended_glasses) để cân đối tỷ lệ khuôn mặt.
 6. Đánh giá chi tiết ngũ quan (mắt, mũi, môi, hàm), độ hài hòa tổng thể (thang điểm 10) và lời đúc kết.
 
-Quy định bắt buộc:
+Quy định bắt buộc về ngôn ngữ và nội dung:
+- BẮT BUỘC: Toàn bộ nội dung phân tích trong các trường JSON phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH VÀ NGUYÊN ÂM TIẾNG VIỆT (sắc, huyền, hỏi, ngã, nặng, ă, â, ê, ô, ơ, ư, đ).
+- TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG ĐỂ MẤT DẤU (ví dụ: bắt buộc viết 'Hệ Mèo sắc sảo', 'Mặt trái xoan', 'Dáng mắt hạnh nhân', 'Tone da ấm', cấm viết 'He Meo', 'Mat hanh nhan', 'Tone da am', 'Trai xoan').
 - Sử dụng tiếng Việt chuẩn mực, từ ngữ chuyên nghiệp, lịch sự, tôn trọng người dùng.
 - Tuyệt đối không sử dụng bất kỳ biểu tượng cảm xúc (emoji hoặc icon) nào trong toàn bộ văn bản phản hồi.`;
 
     const generateConfig = {
-      systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. Nhiệm vụ của bạn là đưa ra những nhận định chuẩn xác, khoa học, tinh tế và gợi ý phong cách tôn vinh vẻ đẹp tự nhiên của mỗi người.',
+      systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. BẮT BUỘC: Mọi nhận định, mô tả và nội dung trả về phải được viết bằng TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, chuẩn ngữ pháp, dấu thanh và chính tả tiếng Việt. TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG ĐỂ MẤT DẤU (ví dụ phải viết: Hệ Mèo sắc sảo, Mặt trái xoan, Dáng mắt hạnh nhân, Tone ấm, không được viết He Meo, Trai xoan, Mat hanh nhan, Tone am).',
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
         properties: {
           vibe_type: {
             type: Type.STRING,
-            description: 'Phân loại khuôn mặt theo hệ động vật kèm đặc trưng khí chất'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Phân loại khuôn mặt theo hệ động vật kèm đặc trưng khí chất'
           },
           eye_shape: {
             type: Type.STRING,
-            description: 'Dáng mắt chủ đạo của diện mạo'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Dáng mắt chủ đạo của diện mạo'
           },
           skin_tone: {
             type: Type.STRING,
-            description: 'Đánh giá sắc tố diện mạo cá nhân Personal Color (tone ấm/lạnh, mùa màu và gợi ý màu sắc)'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đánh giá sắc tố diện mạo cá nhân Personal Color'
           },
           recommended_hairstyles: {
             type: Type.ARRAY,
             items: {
               type: Type.STRING
             },
-            description: 'Danh sách 3 kiểu tóc phù hợp nhất kèm lý do'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Danh sách 3 kiểu tóc phù hợp nhất kèm lý do'
           },
           recommended_glasses: {
             type: Type.STRING,
-            description: 'Hình dáng gọng kính mắt và phụ kiện phù hợp nhất'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Hình dáng gọng kính mắt và phụ kiện phù hợp nhất'
           },
           faceShape: {
             type: Type.STRING,
-            description: 'Hình dáng khuôn mặt chính xác (Trái xoan, Tròn, Vuông chữ điền, Trái tim, Kim cương, Dài...)'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Hình dáng khuôn mặt chính xác (Trái xoan, Tròn, Vuông chữ điền...)'
           },
           harmonyScore: {
             type: Type.NUMBER,
@@ -233,38 +308,38 @@ Quy định bắt buộc:
             properties: {
               eyes: {
                 type: Type.STRING,
-                description: 'Nhận xét ưu điểm và thần thái của đôi mắt và ánh nhìn'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét ưu điểm và thần thái của đôi mắt'
               },
               nose: {
                 type: Type.STRING,
-                description: 'Nhận xét ưu điểm về sống mũi, dáng mũi và tỷ lệ mũi'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét ưu điểm về sống mũi'
               },
               lips: {
                 type: Type.STRING,
-                description: 'Nhận xét ưu điểm về khuôn miệng, dáng môi và nụ cười'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét ưu điểm về khuôn miệng và nụ cười'
               },
               jawline: {
                 type: Type.STRING,
-                description: 'Nhận xét ưu điểm về xương hàm, độ thon gọn của cằm và góc hàm'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét ưu điểm về xương hàm và cằm'
               },
               verticalProportions: {
                 type: Type.STRING,
-                description: 'Nhận xét chi tiết về tỷ lệ ba tầng mặt (trán, mũi, cằm) dựa trên số liệu đo đạc'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét chi tiết về tỷ lệ ba tầng mặt'
               },
               horizontalProportions: {
                 type: Type.STRING,
-                description: 'Nhận xét về tỷ lệ năm phần chiều ngang và khoảng cách hai mắt'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận xét về tỷ lệ năm phần chiều ngang'
               },
               symmetry: {
                 type: Type.STRING,
-                description: 'Đánh giá mức độ đối xứng giữa nửa mặt bên trái và bên phải'
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đánh giá mức độ đối xứng hai nửa mặt'
               }
             },
             required: ['eyes', 'nose', 'lips', 'jawline', 'verticalProportions', 'horizontalProportions', 'symmetry']
           },
           summary: {
             type: Type.STRING,
-            description: 'Lời đúc kết tổng quan tinh tế, nhã nhặn và tích cực về diện mạo'
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Lời đúc kết tổng quan diện mạo'
           }
         },
         required: [
@@ -315,7 +390,8 @@ Quy định bắt buộc:
       });
     }
 
-    const parsedData = JSON.parse(response.text);
+    let parsedData = JSON.parse(response.text);
+    parsedData = sanitizeAnalysisObject(parsedData);
 
     return res.json({
       success: true,

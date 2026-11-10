@@ -6,8 +6,8 @@
     <title>Hệ Thống Đánh Giá Khuôn Mặt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
     <div class="container">
@@ -40,14 +40,46 @@
             <section class="camera-section" id="cameraSection">
                 <div class="camera-container" id="cameraContainer">
                     <video id="videoElement" autoplay playsinline muted></video>
+                    <!-- Khung vẽ lưới AR thời gian thực -->
+                    <canvas id="arCanvas"></canvas>
                     <canvas id="canvasElement"></canvas>
+
+                    <!-- Khung định vị khuôn mặt Oval -->
                     <div class="camera-guide-overlay" id="cameraGuide">
-                        <div class="face-guide-oval"></div>
+                        <div class="face-guide-oval" id="faceGuideOval">
+                            <span class="guide-text" id="guideText">Đưa khuôn mặt vào khung hình</span>
+                        </div>
                     </div>
+
+                    <!-- Thanh trạng thái trực quan với đèn báo LED -->
+                    <div class="camera-hud-status" id="cameraHudStatus">
+                        <div class="hud-item">
+                            <span class="hud-dot" id="hudLightingDot"></span>
+                            <span class="hud-label">Ánh sáng:</span>
+                            <span class="hud-val" id="hudLightingVal">Đang đo</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-dot" id="hudAngleDot"></span>
+                            <span class="hud-label">Góc mặt:</span>
+                            <span class="hud-val" id="hudAngleVal">Đang nhận diện</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-dot" id="hudDistanceDot"></span>
+                            <span class="hud-label">Vị trí:</span>
+                            <span class="hud-val" id="hudDistanceVal">Đang căn chỉnh</span>
+                        </div>
+                    </div>
+
                     <!-- Tia quét hiệu ứng chờ -->
                     <div class="scanner-overlay" id="cameraScanner" style="display: none;">
                         <div class="scan-beam"></div>
                     </div>
+                </div>
+
+                <!-- Dòng trạng thái quét biến đổi liên tục dưới bức ảnh -->
+                <div class="scanning-status-bar" id="cameraScanningStatus" style="display: none;">
+                    <span class="scanning-pulse-dot"></span>
+                    <span class="scanning-text" id="cameraScanningText">Đang trích xuất 468 điểm mốc nhân trắc học...</span>
                 </div>
 
                 <div class="camera-controls">
@@ -93,6 +125,13 @@
                                 <div class="scan-beam"></div>
                             </div>
                         </div>
+
+                        <!-- Dòng trạng thái quét biến đổi liên tục dưới bức ảnh -->
+                        <div class="scanning-status-bar" id="uploadScanningStatus" style="display: none;">
+                            <span class="scanning-pulse-dot"></span>
+                            <span class="scanning-text" id="uploadScanningText">Đang trích xuất 468 điểm mốc nhân trắc học...</span>
+                        </div>
+
                         <button type="button" class="btn btn-secondary btn-remove" id="removeBtn">
                             <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -172,16 +211,12 @@
 
                 <!-- Khối nhận xét chuyên sâu từ AI -->
                 <div class="result-card" id="resultCard">
-                    <div class="spinner-wrapper" id="spinnerWrapper">
-                        <div class="spinner"></div>
-                        <p class="loading-text">Hệ thống đang quét diện mạo và giải mã tỷ lệ ngũ quan...</p>
-                    </div>
-                    <div class="result-body" id="resultBody" style="display: none;"></div>
+                    <div class="result-body" id="resultBody"></div>
                 </div>
             </section>
         </main>
     </div>
 
-    <script type="module" src="app.js?v=8"></script>
+    <script type="module" src="app.js?v=10"></script>
 </body>
 </html>
