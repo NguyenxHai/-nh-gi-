@@ -21,6 +21,26 @@ const cameraScanningText = document.getElementById('cameraScanningText');
 const uploadScanningStatus = document.getElementById('uploadScanningStatus');
 const uploadScanningText = document.getElementById('uploadScanningText');
 
+// Các thành phần tạo và tải thẻ kết quả Story 9:16
+const downloadStoryBtn = document.getElementById('downloadStoryBtn');
+const downloadStoryBtnBottom = document.getElementById('downloadStoryBtnBottom');
+const storyCard = document.getElementById('storyCard');
+const storyCardContainer = document.getElementById('storyCardContainer');
+const storyPortraitImg = document.getElementById('storyPortraitImg');
+const storyVibeBadgeVal = document.getElementById('storyVibeBadgeVal');
+const storyScoreBig = document.getElementById('storyScoreBig');
+const storyScoreFill = document.getElementById('storyScoreFill');
+const storyShapeName = document.getElementById('storyShapeName');
+const storyEyeShape = document.getElementById('storyEyeShape');
+const storyColorDesc = document.getElementById('storyColorDesc');
+const storySwatchesRow = document.getElementById('storySwatchesRow');
+const storyVerticalText = document.getElementById('storyVerticalText');
+const storySymmetryText = document.getElementById('storySymmetryText');
+
+let lastAnalyzedImageBase64 = null;
+let lastAnalyzedData = null;
+let lastAnalyzedMetrics = null;
+
 // Các thành phần đèn báo trạng thái trực quan HUD
 const hudLightingDot = document.getElementById('hudLightingDot');
 const hudLightingVal = document.getElementById('hudLightingVal');
@@ -856,6 +876,156 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         </div>
     `;
     resultBody.style.display = 'block';
+
+    // Cập nhật thẻ kết quả Story 9:16
+    updateStoryCardContent(data, lastAnalyzedMetrics, lastAnalyzedImageBase64);
+}
+
+// Cập nhật nội dung cho thẻ kết quả Story 9:16
+function updateStoryCardContent(data, metrics, imageBase64) {
+    if (!data) return;
+
+    if (imageBase64 && storyPortraitImg) {
+        storyPortraitImg.src = imageBase64;
+    }
+
+    if (storyVibeBadgeVal) {
+        storyVibeBadgeVal.textContent = normalizeVietnamese(data.vibe_type) || 'Hài hòa';
+    }
+
+    const scoreVal = typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.8;
+    if (storyScoreBig) {
+        storyScoreBig.textContent = scoreVal.toFixed(1);
+    }
+    if (storyScoreFill) {
+        storyScoreFill.style.width = `${Math.min(100, Math.max(0, scoreVal * 10))}%`;
+    }
+
+    if (storyShapeName) {
+        storyShapeName.textContent = normalizeVietnamese(data.faceShape) || 'Trái xoan';
+    }
+    if (storyEyeShape) {
+        storyEyeShape.textContent = normalizeVietnamese(data.eye_shape) || 'Dáng mắt tự nhiên';
+    }
+
+    const skinToneText = normalizeVietnamese(data.skin_tone) || 'Tone tự nhiên hài hòa';
+    if (storyColorDesc) {
+        storyColorDesc.textContent = skinToneText;
+    }
+
+    // Xác định bảng màu phù hợp theo Personal Color
+    let swatches = [
+        { name: 'Đất ấm', hex: '#D97736' },
+        { name: 'Caramel', hex: '#E6A15C' },
+        { name: 'Rêu ấm', hex: '#859438' },
+        { name: 'Be nhạt', hex: '#D4A373' },
+        { name: 'Cam cháy', hex: '#C84B31' }
+    ];
+
+    const lowerTone = skinToneText.toLowerCase();
+    if (lowerTone.includes('lạnh') || lowerTone.includes('cool') || lowerTone.includes('hạ') || lowerTone.includes('đông')) {
+        swatches = [
+            { name: 'Xám đá', hex: '#4A6984' },
+            { name: 'Oải hương', hex: '#9381FF' },
+            { name: 'Hồng tro', hex: '#C86D8B' },
+            { name: 'Navy sâu', hex: '#1D3557' },
+            { name: 'Ngọc lạnh', hex: '#70A9A1' }
+        ];
+    }
+
+    if (storySwatchesRow) {
+        storySwatchesRow.innerHTML = swatches.map(sw => `
+            <div class="story-swatch-item">
+                <div class="story-swatch-circle" style="background-color: ${sw.hex};"></div>
+                <span class="story-swatch-name">${sw.name}</span>
+            </div>
+        `).join('');
+    }
+
+    if (metrics) {
+        if (storyVerticalText) {
+            storyVerticalText.textContent = `${metrics.foreheadPct.toFixed(0)}% : ${metrics.nosePct.toFixed(0)}% : ${metrics.chinPct.toFixed(0)}%`;
+        }
+        if (storySymmetryText) {
+            storySymmetryText.textContent = `${metrics.overallSymmetry.toFixed(1)}%`;
+        }
+    }
+}
+
+// Xử lý tạo và tải thẻ kết quả tỷ lệ 9:16 bằng html2canvas
+async function exportStoryCard(buttonTrigger) {
+    if (typeof html2canvas !== 'function') {
+        alert('Thư viện tạo hình ảnh chưa được tải xong. Vui lòng thử lại sau giây lát.');
+        return;
+    }
+
+    if (!storyCard) return;
+
+    // Lưu lại giao diện ban đầu của nút bấm
+    const originalContent = buttonTrigger ? buttonTrigger.innerHTML : '';
+    if (buttonTrigger) {
+        buttonTrigger.disabled = true;
+        buttonTrigger.innerHTML = `
+            <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Đang tạo ảnh 9:16...
+        `;
+    }
+
+    try {
+        // Đảm bảo cập nhật dữ liệu mới nhất
+        if (lastAnalyzedData) {
+            updateStoryCardContent(lastAnalyzedData, lastAnalyzedMetrics, lastAnalyzedImageBase64);
+        }
+
+        // Đảm bảo ảnh chân dung đã tải xong
+        if (storyPortraitImg && !storyPortraitImg.complete) {
+            await new Promise(resolve => {
+                storyPortraitImg.onload = resolve;
+                storyPortraitImg.onerror = resolve;
+            });
+        }
+
+        // Tạm thời đưa khung ảnh vào viewport để html2canvas kết xuất chính xác kích thước
+        storyCardContainer.style.opacity = '1';
+        storyCardContainer.style.zIndex = '-999';
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const canvas = await html2canvas(storyCard, {
+            scale: 2.4, // Độ phân giải chuẩn 1080x1920 (9:16 Full HD)
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#080c18',
+            logging: false
+        });
+
+        // Tạo liên kết tải tệp ảnh xuống thiết bị
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `the-ket-qua-dien-mao-${Date.now()}.png`;
+        downloadLink.href = canvas.toDataURL('image/png', 0.95);
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    } catch (err) {
+        console.error('Lỗi khi xuất thẻ kết quả Story:', err);
+    } finally {
+        storyCardContainer.style.opacity = '0';
+        if (buttonTrigger) {
+            buttonTrigger.disabled = false;
+            buttonTrigger.innerHTML = originalContent;
+        }
+    }
+}
+
+// Gán sự kiện click tải thẻ
+if (downloadStoryBtn) {
+    downloadStoryBtn.addEventListener('click', () => exportStoryCard(downloadStoryBtn));
+}
+if (downloadStoryBtnBottom) {
+    downloadStoryBtnBottom.addEventListener('click', () => exportStoryCard(downloadStoryBtnBottom));
 }
 
 // Xử lý chụp ảnh và phân tích toàn diện
@@ -961,6 +1131,9 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
     captureAnalyzeBtn.disabled = true;
     analyzeUploadBtn.disabled = true;
 
+    // Lưu lại ảnh đầu vào phục vụ kết xuất thẻ Story
+    lastAnalyzedImageBase64 = imageBase64;
+
     // Không hiển thị khung kết quả trong thời gian chờ để tập trung vào bức ảnh và dòng trạng thái
     resultSection.style.display = 'none';
     resultBody.innerHTML = '';
@@ -1045,7 +1218,10 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
 
         if (resData.success && (resData.data || resData.vibe_type)) {
             const finalData = resData.data || resData;
+            lastAnalyzedData = finalData;
+            lastAnalyzedMetrics = calculatedMetrics;
             renderStructuredAnalysis(finalData, resData.isDemo, resData.notice);
+            updateStoryCardContent(finalData, calculatedMetrics, lastAnalyzedImageBase64);
             resultSection.style.display = 'block';
             resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {

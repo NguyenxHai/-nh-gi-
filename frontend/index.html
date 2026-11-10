@@ -7,7 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -154,7 +155,17 @@
 
             <!-- Khu vực kết quả phân tích -->
             <section class="result-section" id="resultSection" style="display: none;">
-                <h2 class="result-title">Kết Quả Phân Tích Toàn Diện</h2>
+                <div class="result-header-row">
+                    <h2 class="result-title">Kết Quả Phân Tích Toàn Diện</h2>
+                    <button type="button" class="btn btn-accent btn-download-story" id="downloadStoryBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Tải thẻ kết quả
+                    </button>
+                </div>
 
                 <!-- Thông báo cảnh báo kiểm thử chất lượng ảnh -->
                 <div class="warning-box" id="warningBox" style="display: none;"></div>
@@ -213,10 +224,100 @@
                 <div class="result-card" id="resultCard">
                     <div class="result-body" id="resultBody"></div>
                 </div>
+
+                <!-- Nút tải thẻ chia sẻ Story ở chân trang kết quả -->
+                <div class="result-bottom-action">
+                    <button type="button" class="btn btn-accent btn-download-story-large" id="downloadStoryBtnBottom">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Tải Thẻ Kết Quả Story 9:16
+                    </button>
+                </div>
             </section>
         </main>
     </div>
 
-    <script type="module" src="app.js?v=10"></script>
+    <!-- Khung ảnh thẻ kết quả Story 9:16 phục vụ kết xuất html2canvas -->
+    <div id="storyCardContainer" class="story-export-container">
+        <div class="story-card" id="storyCard">
+            <!-- Hiệu ứng ánh sáng nền -->
+            <div class="story-bg-glow glow-top"></div>
+            <div class="story-bg-glow glow-bottom"></div>
+
+            <!-- Phần đầu thẻ -->
+            <div class="story-header">
+                <span class="story-tag">AI FACIAL HARMONY</span>
+                <h3 class="story-title">Báo Cáo Nhân Trắc Học Diện Mạo</h3>
+            </div>
+
+            <!-- Khu vực ảnh chân dung -->
+            <div class="story-portrait-wrapper">
+                <div class="story-portrait-ring">
+                    <img id="storyPortraitImg" class="story-portrait-img" alt="Ảnh diện mạo">
+                </div>
+                <!-- Huy hiệu thần thái hệ động vật -->
+                <div class="story-vibe-pill">
+                    <span class="story-vibe-badge-label">HỆ KHÍ CHẤT</span>
+                    <span class="story-vibe-badge-val" id="storyVibeBadgeVal">Hệ Mèo</span>
+                </div>
+            </div>
+
+            <!-- Khối điểm số và dáng khuôn mặt -->
+            <div class="story-stats-grid">
+                <div class="story-stat-card">
+                    <span class="story-stat-label">ĐIỂM HÀI HÒA</span>
+                    <div class="story-score-wrap">
+                        <span class="story-score-big" id="storyScoreBig">9.2</span>
+                        <span class="story-score-sub">/ 10</span>
+                    </div>
+                    <div class="story-bar-track">
+                        <div class="story-bar-fill" id="storyScoreFill"></div>
+                    </div>
+                </div>
+                <div class="story-stat-card">
+                    <span class="story-stat-label">DÁNG KHUÔN MẶT</span>
+                    <span class="story-shape-name" id="storyShapeName">Trái xoan</span>
+                    <span class="story-eye-shape" id="storyEyeShape">Mắt hạnh nhân</span>
+                </div>
+            </div>
+
+            <!-- Khối bảng màu sắc tố Personal Color -->
+            <div class="story-color-section">
+                <div class="story-color-info">
+                    <span class="story-color-title">SẮC TỐ CÁ NHÂN (PERSONAL COLOR)</span>
+                    <span class="story-color-desc" id="storyColorDesc">Tone ấm mùa thu (Warm Autumn)</span>
+                </div>
+                <div class="story-swatches-row" id="storySwatchesRow">
+                    <!-- Các ô màu mẫu phối theo tone -->
+                </div>
+            </div>
+
+            <!-- Chỉ số tỷ lệ chuẩn vàng -->
+            <div class="story-ratios-box">
+                <div class="story-ratio-item">
+                    <span class="story-ratio-name">Tỷ lệ 3 tầng dọc</span>
+                    <span class="story-ratio-val" id="storyVerticalText">33% : 33% : 34%</span>
+                </div>
+                <div class="story-ratio-item">
+                    <span class="story-ratio-name">Độ đối xứng 2 bên</span>
+                    <span class="story-ratio-val" id="storySymmetryText">96.5%</span>
+                </div>
+            </div>
+
+            <!-- Phần chân trang gắn Logo thương hiệu -->
+            <div class="story-footer">
+                <div class="story-branding">
+                    <span class="story-brand-name">AI FACE ANALYZER</span>
+                    <span class="story-brand-sub">Đánh giá diện mạo chuẩn nhân trắc học</span>
+                </div>
+                <span class="story-ratio-tag">9:16 STORY</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js?v=11"></script>
 </body>
 </html>
