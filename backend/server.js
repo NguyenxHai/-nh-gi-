@@ -219,7 +219,7 @@ async function handleFaceAnalysis(req, res) {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || 'AQ.Ab8RN6Lf5yHyYsWo0YwoEupOjPKGIAISLiEgfNmFxVtiX1nt7Q';
+    const apiKey = process.env.GEMINI_API_KEY;
 
     // Kiểm tra khóa xác thực
     if (!apiKey) {
