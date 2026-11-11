@@ -180,9 +180,14 @@ function generateFallbackAnalysis(metrics) {
   }
 
   // Điểm số hài hòa dao động thực tế theo độ đối xứng và độ cân đối
-  const verticalVariance = Math.abs(33.3 - foreheadPct) + Math.abs(33.3 - nosePct) + Math.abs(33.3 - chinPct);
-  const rawScore = 10 - (verticalVariance * 0.06) - ((100 - sym) * 0.05);
-  const harmonyScore = Math.min(9.8, Math.max(8.0, Math.round(rawScore * 10) / 10));
+  let harmonyScore = 8.5;
+  if (metrics && typeof metrics.calculatedScore10 === 'number') {
+    harmonyScore = metrics.calculatedScore10;
+  } else {
+    const verticalVariance = Math.abs(33.3 - foreheadPct) + Math.abs(33.3 - nosePct) + Math.abs(33.3 - chinPct);
+    const rawScore = 10 - (verticalVariance * 0.06) - ((100 - sym) * 0.05);
+    harmonyScore = Math.min(9.8, Math.max(8.0, Math.round(rawScore * 10) / 10));
+  }
 
   return {
     vibe_type: vibe,
@@ -249,13 +254,23 @@ async function handleFaceAnalysis(req, res) {
 
     // Tổng hợp thông số đo đạc hình học từ điểm mốc
     let metricsContext = 'Không có thông số đo đạc hình học kèm theo.';
+    let scoreDirectives = '';
     if (metrics) {
+      const score100Text = metrics.calculatedScore100 ? `${metrics.calculatedScore100.toFixed(1)}/100` : '85.0/100';
+      const score10Val = typeof metrics.calculatedScore10 === 'number' ? metrics.calculatedScore10 : 8.5;
+
       metricsContext = `
 Dưới đây là các thông số hình học được đo đạc chính xác từ các điểm mốc trên khuôn mặt:
 - Tỷ lệ ba phần chiều dọc (Trán : Mũi : Cằm): ${metrics.verticalRatioText || 'Không xác định'} (Tỷ lệ chuẩn mực tham chiếu là 1.0 : 1.0 : 1.0 hay 33.3% - 33.3% - 33.3%).
 - Tỷ lệ năm phần chiều ngang: Độ rộng mắt chiếm ${metrics.horizontalEyeRatioText || 'Không xác định'} bề ngang khuôn mặt (Tỷ lệ tham chiếu theo quy tắc ngũ nhãn là xấp xỉ 20%).
 - Độ đối xứng hai bên khuôn mặt: ${metrics.symmetryScoreText || 'Không xác định'}.
 - Tỷ lệ chiều ngang / chiều dài mặt: ${metrics.faceRatio ? metrics.faceRatio.toFixed(2) : 'Không xác định'}.
+- Điểm cân đối hài hòa đã được máy đo đạc chính xác bằng toán học: ${score100Text} (tương đương ${score10Val.toFixed(1)}/10).
+`;
+
+      scoreDirectives = `
+MỆNH LỆNH BẮT BUỘC VỀ ĐIỂM CÂN ĐỐI (HARMONY SCORE):
+Điểm cân đối của người này đã được máy đo chính xác là ${score100Text} (tương đương ${score10Val.toFixed(1)}/10). Hãy dùng đúng con số ${score10Val.toFixed(1)} này cho trường harmonyScore trong JSON trả về và giải thích nguyên nhân dựa trên các số liệu thực tế đó (độ đối xứng ${metrics.symmetryScoreText || ''}, tỷ lệ ba phần dọc ${metrics.verticalRatioText || ''}), TUYỆT ĐỐI KHÔNG TỰ CHẤM HOẶC BỊA RA MỘT ĐIỂM SỐ KHÁC.
 `;
     }
 
@@ -283,6 +298,7 @@ Dưới đây là các thông số hình học được đo đạc chính xác t
     const promptText = `Bạn hãy quan sát thật kỹ bức ảnh chân dung cụ thể này (nhận diện rõ giới tính, độ tuổi ước tính, chi tiết ngũ quan, khung xương, ánh mắt, nụ cười và sắc da thực tế) kết hợp với số liệu đo đạc và yêu cầu tùy biến:
 ${metricsContext}
 ${preferenceContext}
+${scoreDirectives}
 
 YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUYỆT ĐỐI KHÔNG DÙNG VĂN MẪU HOẶC NỘI DUNG LẶP LẠI):
 1. Hệ động vật diện mạo (vibe_type): Quan sát thần thái và nét mặt trong ảnh để phân loại chính xác vào hệ khí chất động vật phù hợp (ví dụ: Hệ Mèo kiêu kỳ sắc sảo, Hệ Cún ngọt ngào thân thiện, Hệ Cáo thông minh cuốn hút, Hệ Hươu thanh thuần thoát tục, Hệ Thỏ trong trẻo dịu dàng, Hệ Sói bí ẩn cá tính, Hệ Báo sắc bén mạnh mẽ, Hệ Gấu ấm áp vững chãi...). Nêu rõ lý do cụ thể vì sao đường nét của gương mặt này tạo nên khí chất đó.
@@ -415,24 +431,47 @@ QUY ĐỊNH BẮT BUỘC:
       });
     } catch (primaryErr) {
       console.warn('Chuyển đổi sang model kế tiếp do:', primaryErr.message);
-      // Phương án dự phòng với gemini-3.5-flash
-      response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: [
-          {
-            inlineData: {
-              data: cleanBase64,
-              mimeType: mimeType
-            }
-          },
-          promptText
-        ],
-        config: generateConfig
-      });
+      try {
+        // Phương án dự phòng 1 với gemini-3.5-flash
+        response = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: [
+            {
+              inlineData: {
+                data: cleanBase64,
+                mimeType: mimeType
+              }
+            },
+            promptText
+          ],
+          config: generateConfig
+        });
+      } catch (secondaryErr) {
+        console.warn('Chuyển đổi sang model dự phòng 2 do:', secondaryErr.message);
+        // Phương án dự phòng 2 với gemini-3.8-flash
+        response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: [
+            {
+              inlineData: {
+                data: cleanBase64,
+                mimeType: mimeType
+              }
+            },
+            promptText
+          ],
+          config: generateConfig
+        });
+      }
     }
 
     let parsedData = JSON.parse(response.text);
     parsedData = sanitizeAnalysisObject(parsedData);
+
+    // Cưỡng chế điểm số luôn theo thuật toán đo đạc toán học chính xác từ MediaPipe
+    if (metrics && typeof metrics.calculatedScore10 === 'number') {
+      parsedData.harmonyScore = metrics.calculatedScore10;
+    }
 
     return res.json({
       success: true,
