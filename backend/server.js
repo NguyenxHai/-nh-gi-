@@ -322,7 +322,7 @@ QUY ĐỊNH BẮT BUỘC:
 - TUYỆT ĐỐI KHÔNG sử dụng bất kỳ biểu tượng cảm xúc (emoji hoặc icon) nào trong toàn bộ văn bản phản hồi.`;
 
     const generateConfig = {
-      temperature: 0.4,
+      temperature: 0.1,
       maxOutputTokens: 1200,
       systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. BẮT BUỘC: Mọi nhận định, mô tả và nội dung trả về phải được viết bằng TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, chuẩn ngữ pháp, dấu thanh và chính tả tiếng Việt. TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG DÙNG VĂN MẪU RẬP KHUÔN, phải quan sát ảnh thật kỹ để phân tích chính xác từng khuôn mặt riêng biệt.',
       responseMimeType: 'application/json',
@@ -413,28 +413,21 @@ QUY ĐỊNH BẮT BUỘC:
       }
     };
 
-    let response;
-    try {
-      // Ưu tiên sử dụng model gemini-3.5-flash-lite tốc độ cao
-      response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash-lite',
-        contents: [
-          {
-            inlineData: {
-              data: cleanBase64,
-              mimeType: mimeType
-            }
-          },
-          promptText
-        ],
-        config: generateConfig
-      });
-    } catch (primaryErr) {
-      console.warn('Chuyển đổi sang model kế tiếp do:', primaryErr.message);
+    const candidateModels = [
+      'gemini-3.6-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash'
+    ];
+
+    let response = null;
+    let lastError = null;
+
+    for (const modelName of candidateModels) {
       try {
-        // Phương án dự phòng 1 với gemini-3.5-flash
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: modelName,
           contents: [
             {
               inlineData: {
@@ -446,23 +439,17 @@ QUY ĐỊNH BẮT BUỘC:
           ],
           config: generateConfig
         });
-      } catch (secondaryErr) {
-        console.warn('Chuyển đổi sang model dự phòng 2 do:', secondaryErr.message);
-        // Phương án dự phòng 2 với gemini-3.8-flash
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: [
-            {
-              inlineData: {
-                data: cleanBase64,
-                mimeType: mimeType
-              }
-            },
-            promptText
-          ],
-          config: generateConfig
-        });
+        if (response && response.text) {
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`Mô hình ${modelName} phản hồi lỗi: ${err.message}. Đang chuyển tiếp sang mô hình tiếp theo...`);
       }
+    }
+
+    if (!response || !response.text) {
+      throw lastError || new Error('Không thể kết nối đến các mô hình phân tích.');
     }
 
     let parsedData = JSON.parse(response.text);
