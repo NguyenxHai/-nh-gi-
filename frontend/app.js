@@ -41,6 +41,26 @@ let lastAnalyzedImageBase64 = null;
 let lastAnalyzedData = null;
 let lastAnalyzedMetrics = null;
 
+// Các thành phần ngăn kéo lịch sử phân tích và so sánh diện mạo
+const openHistoryBtn = document.getElementById('openHistoryBtn');
+const historyOverlay = document.getElementById('historyOverlay');
+const historyDrawer = document.getElementById('historyDrawer');
+const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const triggerCompareBtn = document.getElementById('triggerCompareBtn');
+const historyCountBadge = document.getElementById('historyCountBadge');
+const compareCounterBadge = document.getElementById('compareCounterBadge');
+const historyListContainer = document.getElementById('historyListContainer');
+
+// Các thành phần hộp thoại so sánh
+const compareModalOverlay = document.getElementById('compareModalOverlay');
+const compareModal = document.getElementById('compareModal');
+const closeCompareModalBtn = document.getElementById('closeCompareModalBtn');
+const compareModalBody = document.getElementById('compareModalBody');
+
+const STORAGE_HISTORY_KEY = 'face_analyzer_history_v1';
+let selectedScansForCompare = [];
+
 // Các thành phần đèn báo trạng thái trực quan HUD
 const hudLightingDot = document.getElementById('hudLightingDot');
 const hudLightingVal = document.getElementById('hudLightingVal');
@@ -1224,6 +1244,9 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
             updateStoryCardContent(finalData, calculatedMetrics, lastAnalyzedImageBase64);
             resultSection.style.display = 'block';
             resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Tự động lưu lần phân tích này vào lịch sử trình duyệt
+            saveScanToHistory(finalData, calculatedMetrics, lastAnalyzedImageBase64);
         } else {
             resultBody.innerHTML = `<div class="error-message">${resData.message || 'Không thể thực hiện đánh giá. Vui lòng kiểm tra lại cấu hình hệ thống.'}</div>`;
             resultBody.style.display = 'block';
@@ -1241,8 +1264,461 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
     }
 }
 
+// ==========================================================================
+// Quản Lý Lịch Sử Phân Tích (LocalStorage) & So Sánh Diện Mạo Hai Lần Quét
+// ==========================================================================
+
+// Nén ảnh chân dung thành ảnh thu nhỏ để lưu trữ an toàn trong localStorage
+async function createThumbnail(base64Str, maxWidth = 120, maxHeight = 120) {
+    return new Promise((resolve) => {
+        if (!base64Str) return resolve('');
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.width = width;
+            thumbCanvas.height = height;
+            const ctx = thumbCanvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(thumbCanvas.toDataURL('image/jpeg', 0.65));
+        };
+        img.onerror = () => resolve('');
+        img.src = base64Str;
+    });
+}
+
+// Đọc danh sách lịch sử từ localStorage
+function getStoredHistory() {
+    try {
+        const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.warn('Lỗi đọc lịch sử từ localStorage:', e);
+        return [];
+    }
+}
+
+// Ghi danh sách lịch sử vào localStorage
+function setStoredHistory(historyList) {
+    try {
+        localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(historyList));
+        updateHistoryCountBadge(historyList.length);
+    } catch (e) {
+        console.warn('Lỗi ghi lịch sử vào localStorage:', e);
+    }
+}
+
+// Cập nhật số lượng lượt quét trên nút nổi
+function updateHistoryCountBadge(count) {
+    if (historyCountBadge) {
+        historyCountBadge.textContent = count;
+    }
+}
+
+// Lưu một lần quét mới vào lịch sử
+async function saveScanToHistory(data, metrics, imageBase64) {
+    if (!data) return;
+    try {
+        const thumbnail = await createThumbnail(imageBase64, 120, 120);
+        const historyList = getStoredHistory();
+
+        const now = new Date();
+        const formattedTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} - ${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+
+        const newScanItem = {
+            id: 'scan_' + Date.now(),
+            timestamp: formattedTime,
+            thumbnail: thumbnail || imageBase64,
+            fullImage: imageBase64,
+            data: data,
+            metrics: metrics,
+            vibe_type: data.vibe_type || 'Chưa xác định',
+            harmonyScore: typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5,
+            faceShape: data.faceShape || 'Trái xoan',
+            skin_tone: data.skin_tone || 'Tone tự nhiên',
+            eye_shape: data.eye_shape || 'Dáng mắt tự nhiên'
+        };
+
+        // Giữ tối đa 10 lượt quét gần nhất để bảo đảm dung lượng lưu trữ an toàn
+        historyList.unshift(newScanItem);
+        if (historyList.length > 10) {
+            historyList.length = 10;
+        }
+
+        setStoredHistory(historyList);
+        renderHistoryDrawer();
+    } catch (err) {
+        console.warn('Lỗi khi lưu lịch sử:', err);
+    }
+}
+
+// Cập nhật trạng thái thanh công cụ so sánh
+function updateCompareToolbar() {
+    const count = selectedScansForCompare.length;
+    if (compareCounterBadge) {
+        compareCounterBadge.textContent = `Đã chọn ${count}/2`;
+    }
+    if (triggerCompareBtn) {
+        triggerCompareBtn.disabled = count !== 2;
+    }
+}
+
+// Bật hoặc tắt chọn một lượt quét để so sánh
+function toggleSelectCompare(scanId) {
+    const idx = selectedScansForCompare.indexOf(scanId);
+    if (idx > -1) {
+        selectedScansForCompare.splice(idx, 1);
+    } else {
+        if (selectedScansForCompare.length >= 2) {
+            // Thay thế mục đầu tiên nếu đã chọn đủ 2
+            selectedScansForCompare.shift();
+        }
+        selectedScansForCompare.push(scanId);
+    }
+    renderHistoryDrawer();
+}
+
+// Tải lại một lượt phân tích cũ lên màn hình chính
+function loadScanIntoView(scanId) {
+    const historyList = getStoredHistory();
+    const targetScan = historyList.find(s => s.id === scanId);
+    if (!targetScan) return;
+
+    lastAnalyzedData = targetScan.data;
+    lastAnalyzedMetrics = targetScan.metrics;
+    lastAnalyzedImageBase64 = targetScan.fullImage || targetScan.thumbnail;
+
+    // Hiển thị lại bảng chỉ số đo đạc
+    if (targetScan.metrics) {
+        renderMetricsDashboard(targetScan.metrics);
+    }
+
+    // Hiển thị lại bảng phân tích chi tiết
+    renderStructuredAnalysis(targetScan.data, false);
+
+    // Cập nhật lại thẻ Story 9:16
+    updateStoryCardContent(targetScan.data, targetScan.metrics, lastAnalyzedImageBase64);
+
+    resultSection.style.display = 'block';
+    closeHistoryDrawer();
+
+    resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Xóa một lượt quét khỏi lịch sử
+function deleteHistoryScan(scanId) {
+    let historyList = getStoredHistory();
+    historyList = historyList.filter(s => s.id !== scanId);
+    setStoredHistory(historyList);
+
+    // Xóa khỏi danh sách so sánh nếu đang chọn
+    selectedScansForCompare = selectedScansForCompare.filter(id => id !== scanId);
+    renderHistoryDrawer();
+}
+
+// Xóa sạch toàn bộ lịch sử
+function clearAllHistory() {
+    if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử phân tích trên trình duyệt không?')) {
+        return;
+    }
+    setStoredHistory([]);
+    selectedScansForCompare = [];
+    renderHistoryDrawer();
+}
+
+// Hiển thị danh sách các thẻ lịch sử trong ngăn kéo
+function renderHistoryDrawer() {
+    if (!historyListContainer) return;
+
+    const historyList = getStoredHistory();
+    updateHistoryCountBadge(historyList.length);
+    updateCompareToolbar();
+
+    if (historyList.length === 0) {
+        historyListContainer.innerHTML = `
+            <div class="history-empty">
+                <p>Chưa có lượt phân tích nào được lưu trữ.</p>
+                <p class="history-empty-sub">Hãy chụp ảnh hoặc tải ảnh lên để hệ thống tự động ghi nhớ các kết quả phân tích của bạn.</p>
+            </div>
+        `;
+        return;
+    }
+
+    historyListContainer.innerHTML = historyList.map(item => {
+        const isSelected = selectedScansForCompare.includes(item.id);
+        const scoreVal = typeof item.harmonyScore === 'number' ? item.harmonyScore.toFixed(1) : '8.5';
+        
+        return `
+            <div class="history-card ${isSelected ? 'is-selected-for-compare' : ''}" data-scan-id="${item.id}">
+                <div class="history-card-top">
+                    <img src="${item.thumbnail || item.fullImage}" alt="Ảnh chân dung" class="history-thumb-img">
+                    <div class="history-info-meta">
+                        <span class="history-time">${item.timestamp}</span>
+                        <div class="history-vibe-name">${normalizeVietnamese(item.vibe_type)}</div>
+                        <div class="history-score-tag">Điểm hài hòa: ${scoreVal}/10 • ${normalizeVietnamese(item.faceShape)}</div>
+                    </div>
+                </div>
+                <div class="history-card-bottom">
+                    <button type="button" class="btn btn-secondary btn-sm btn-view-history" data-id="${item.id}">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Xem lại
+                    </button>
+                    <button type="button" class="btn-history-compare-check ${isSelected ? 'is-active' : ''}" data-id="${item.id}">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        ${isSelected ? 'Đã chọn so sánh' : 'Chọn so sánh'}
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-icon-only btn-delete-history" data-id="${item.id}" title="Xóa lần quét này">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Gắn sự kiện cho các nút trong danh sách
+    historyListContainer.querySelectorAll('.btn-view-history').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            loadScanIntoView(id);
+        });
+    });
+
+    historyListContainer.querySelectorAll('.btn-history-compare-check').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            toggleSelectCompare(id);
+        });
+    });
+
+    historyListContainer.querySelectorAll('.btn-delete-history').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            deleteHistoryScan(id);
+        });
+    });
+}
+
+// Mở ngăn kéo lịch sử
+function openHistoryDrawer() {
+    renderHistoryDrawer();
+    if (historyOverlay) {
+        historyOverlay.style.display = 'block';
+        requestAnimationFrame(() => historyOverlay.classList.add('is-active'));
+    }
+    if (historyDrawer) {
+        historyDrawer.classList.add('is-open');
+        historyDrawer.setAttribute('aria-hidden', 'false');
+    }
+}
+
+// Đóng ngăn kéo lịch sử
+function closeHistoryDrawer() {
+    if (historyOverlay) {
+        historyOverlay.classList.remove('is-active');
+        setTimeout(() => {
+            if (!historyOverlay.classList.contains('is-active')) {
+                historyOverlay.style.display = 'none';
+            }
+        }, 300);
+    }
+    if (historyDrawer) {
+        historyDrawer.classList.remove('is-open');
+        historyDrawer.setAttribute('aria-hidden', 'true');
+    }
+}
+
+// Mở hộp thoại so sánh 2 lần quét
+function openCompareModal() {
+    if (selectedScansForCompare.length !== 2) return;
+
+    const historyList = getStoredHistory();
+    const scanA = historyList.find(s => s.id === selectedScansForCompare[0]);
+    const scanB = historyList.find(s => s.id === selectedScansForCompare[1]);
+    if (!scanA || !scanB) return;
+
+    const scoreA = typeof scanA.harmonyScore === 'number' ? scanA.harmonyScore : 8.5;
+    const scoreB = typeof scanB.harmonyScore === 'number' ? scanB.harmonyScore : 8.5;
+    const scoreDiff = (scoreB - scoreA).toFixed(1);
+    const scoreDiffText = scoreB > scoreA 
+        ? `Lần 2 cao hơn ${Math.abs(scoreDiff)} điểm` 
+        : (scoreB < scoreA ? `Lần 1 cao hơn ${Math.abs(scoreDiff)} điểm` : 'Điểm số hài hòa tương đương');
+
+    const symA = scanA.metrics ? scanA.metrics.overallSymmetry.toFixed(1) + '%' : 'Đang tính';
+    const symB = scanB.metrics ? scanB.metrics.overallSymmetry.toFixed(1) + '%' : 'Đang tính';
+
+    const vertA = scanA.metrics ? `${scanA.metrics.foreheadPct.toFixed(0)}% : ${scanA.metrics.nosePct.toFixed(0)}% : ${scanA.metrics.chinPct.toFixed(0)}%` : 'Chuẩn mực';
+    const vertB = scanB.metrics ? `${scanB.metrics.foreheadPct.toFixed(0)}% : ${scanB.metrics.nosePct.toFixed(0)}% : ${scanB.metrics.chinPct.toFixed(0)}%` : 'Chuẩn mực';
+
+    compareModalBody.innerHTML = `
+        <div class="compare-grid">
+            <!-- Cột Lần Quét 1 -->
+            <div class="compare-col">
+                <div class="compare-portrait-wrap">
+                    <img src="${scanA.thumbnail || scanA.fullImage}" alt="Ảnh lần 1" class="compare-img">
+                    <div class="compare-col-meta">
+                        <span class="compare-label-pill">LẦN QUÉT 1</span>
+                        <span class="compare-time">${scanA.timestamp}</span>
+                        <div class="compare-vibe-name">${normalizeVietnamese(scanA.vibe_type)}</div>
+                    </div>
+                </div>
+
+                <div class="compare-score-box">
+                    <span class="compare-score-label">Điểm số hài hòa</span>
+                    <span class="compare-score-val">${scoreA.toFixed(1)} / 10</span>
+                </div>
+
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Dáng khuôn mặt</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanA.faceShape)}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Dáng mắt chủ đạo</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanA.eye_shape)}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Tỷ lệ ba tầng dọc</span>
+                    <span class="compare-metric-val">${vertA}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Độ đối xứng hai bên</span>
+                    <span class="compare-metric-val">${symA}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Sắc tố cá nhân</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanA.skin_tone)}</span>
+                </div>
+            </div>
+
+            <!-- Cột Lần Quét 2 -->
+            <div class="compare-col">
+                <div class="compare-portrait-wrap">
+                    <img src="${scanB.thumbnail || scanB.fullImage}" alt="Ảnh lần 2" class="compare-img">
+                    <div class="compare-col-meta">
+                        <span class="compare-label-pill">LẦN QUÉT 2</span>
+                        <span class="compare-time">${scanB.timestamp}</span>
+                        <div class="compare-vibe-name">${normalizeVietnamese(scanB.vibe_type)}</div>
+                    </div>
+                </div>
+
+                <div class="compare-score-box">
+                    <span class="compare-score-label">Điểm số hài hòa</span>
+                    <span class="compare-score-val">${scoreB.toFixed(1)} / 10</span>
+                </div>
+
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Dáng khuôn mặt</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanB.faceShape)}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Dáng mắt chủ đạo</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanB.eye_shape)}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Tỷ lệ ba tầng dọc</span>
+                    <span class="compare-metric-val">${vertB}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Độ đối xứng hai bên</span>
+                    <span class="compare-metric-val">${symB}</span>
+                </div>
+                <div class="compare-metric-row">
+                    <span class="compare-metric-label">Sắc tố cá nhân</span>
+                    <span class="compare-metric-val">${normalizeVietnamese(scanB.skin_tone)}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng Tổng Hợp Đối Chiếu -->
+        <div class="compare-diff-section">
+            <h4 class="compare-diff-title">Nhận Định Đối Chiếu Hai Trạng Thái</h4>
+            <table class="compare-diff-table">
+                <thead>
+                    <tr>
+                        <th>Chỉ số</th>
+                        <th>Lần 1</th>
+                        <th>Lần 2</th>
+                        <th>Thay đổi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Điểm hài hòa</td>
+                        <td>${scoreA.toFixed(1)}</td>
+                        <td>${scoreB.toFixed(1)}</td>
+                        <td>${scoreDiffText}</td>
+                    </tr>
+                    <tr>
+                        <td>Độ đối xứng</td>
+                        <td>${symA}</td>
+                        <td>${symB}</td>
+                        <td>${scanA.metrics && scanB.metrics ? (scanB.metrics.overallSymmetry - scanA.metrics.overallSymmetry > 0 ? '+' : '') + (scanB.metrics.overallSymmetry - scanA.metrics.overallSymmetry).toFixed(1) + '%' : '--'}</td>
+                    </tr>
+                    <tr>
+                        <td>Khí chất diện mạo</td>
+                        <td>${normalizeVietnamese(scanA.vibe_type)}</td>
+                        <td>${normalizeVietnamese(scanB.vibe_type)}</td>
+                        <td>${scanA.vibe_type === scanB.vibe_type ? 'Đồng nhất' : 'Biến đổi thần thái'}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="compare-summary-box">
+                Sự thay đổi giữa hai lần quét thường phản ánh góc chụp, điều kiện ánh sáng hoặc biểu cảm khuôn mặt. Việc duy trì góc nhìn chính diện và ánh sáng đồng đều sẽ giúp các chỉ số nhân trắc học đạt độ chuẩn xác tối ưu nhất.
+            </div>
+        </div>
+    `;
+
+    compareModalOverlay.style.display = 'flex';
+}
+
+function closeCompareModal() {
+    if (compareModalOverlay) {
+        compareModalOverlay.style.display = 'none';
+    }
+}
+
 // Khởi chạy ứng dụng
 window.addEventListener('DOMContentLoaded', async () => {
+    // Khởi tạo hiển thị số lượng trong lịch sử
+    renderHistoryDrawer();
+
+    // Gắn sự kiện điều khiển ngăn kéo lịch sử
+    if (openHistoryBtn) openHistoryBtn.addEventListener('click', openHistoryDrawer);
+    if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', closeHistoryDrawer);
+    if (historyOverlay) historyOverlay.addEventListener('click', closeHistoryDrawer);
+    if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearAllHistory);
+    if (triggerCompareBtn) triggerCompareBtn.addEventListener('click', openCompareModal);
+
+    // Gắn sự kiện đóng hộp thoại so sánh
+    if (closeCompareModalBtn) closeCompareModalBtn.addEventListener('click', closeCompareModal);
+    if (compareModalOverlay) {
+        compareModalOverlay.addEventListener('click', (e) => {
+            if (e.target === compareModalOverlay) closeCompareModal();
+        });
+    }
+
     await initFaceLandmarker();
     startCamera();
 });

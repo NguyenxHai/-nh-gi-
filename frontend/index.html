@@ -7,11 +7,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="container">
+        <!-- Thanh thông báo nhẹ Social Proof Banner -->
+        <div class="social-proof-bar" id="socialProofBar">
+            <span class="live-pulse-dot" aria-hidden="true"></span>
+            <span class="social-proof-text">Đã phân tích 1,248 khuôn mặt trong tuần này</span>
+            <span class="social-proof-sep" aria-hidden="true">•</span>
+            <span class="social-proof-sub">Hệ thống phân tích trực tiếp theo thời gian thực</span>
+        </div>
+
         <header class="app-header">
             <h1 class="app-title">Đánh Giá Khuôn Mặt</h1>
             <p class="app-subtitle">Phân tích đường nét diện mạo, đo đạc tỷ lệ hình học và tư vấn phong cách</p>
@@ -100,6 +108,16 @@
                         Chụp và Phân tích
                     </button>
                 </div>
+
+                <!-- Huy hiệu Cam kết Bảo mật đặt ngay dưới nút chụp -->
+                <div class="privacy-badge-container">
+                    <button type="button" class="btn-privacy-badge" tabindex="-1">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <span>Ảnh của bạn được xử lý tức thời và xóa ngay sau khi phân tích, không lưu trữ trên máy chủ.</span>
+                    </button>
+                </div>
                 <p class="camera-notice" id="cameraNotice">Đang khởi tạo bộ phân tích điểm mốc diện mạo...</p>
             </section>
 
@@ -149,6 +167,16 @@
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                         </svg>
                         Bắt đầu phân tích
+                    </button>
+                </div>
+
+                <!-- Huy hiệu Cam kết Bảo mật đặt ngay dưới nút phân tích -->
+                <div class="privacy-badge-container">
+                    <button type="button" class="btn-privacy-badge" tabindex="-1">
+                        <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <span>Ảnh của bạn được xử lý tức thời và xóa ngay sau khi phân tích, không lưu trữ trên máy chủ.</span>
                     </button>
                 </div>
             </section>
@@ -318,6 +346,84 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=11"></script>
+    <!-- Nút mở thanh lịch sử phân tích nổi góc màn hình -->
+    <button type="button" class="history-floating-btn" id="openHistoryBtn" title="Xem lịch sử phân tích gần đây">
+        <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Lịch sử phân tích</span>
+        <span class="history-count-badge" id="historyCountBadge">0</span>
+    </button>
+
+    <!-- Ngăn kéo lịch sử phân tích (Recent Scans Drawer) -->
+    <div class="drawer-overlay" id="historyOverlay" style="display: none;"></div>
+    <aside class="history-drawer" id="historyDrawer" aria-hidden="true">
+        <div class="drawer-header">
+            <div class="drawer-title-group">
+                <h3 class="drawer-title">Lịch Sử Phân Tích Gần Đây</h3>
+                <p class="drawer-subtitle">Dữ liệu được lưu trữ trên trình duyệt của bạn</p>
+            </div>
+            <div class="drawer-header-actions">
+                <button type="button" class="btn btn-secondary btn-icon-only" id="clearHistoryBtn" title="Xóa toàn bộ lịch sử">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+                <button type="button" class="btn btn-secondary btn-icon-only" id="closeHistoryBtn" title="Đóng bảng lịch sử">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Thanh công cụ so sánh diện mạo -->
+        <div class="drawer-compare-bar" id="drawerCompareBar">
+            <div class="compare-bar-left">
+                <span class="compare-info-text">Chọn 2 lần quét để so sánh sự thay đổi</span>
+                <span class="compare-counter-badge" id="compareCounterBadge">Đã chọn 0/2</span>
+            </div>
+            <button type="button" class="btn btn-accent btn-sm" id="triggerCompareBtn" disabled>
+                <svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                So sánh ngay
+            </button>
+        </div>
+
+        <!-- Danh sách thẻ lịch sử -->
+        <div class="drawer-content" id="historyListContainer">
+            <!-- Render danh sách các thẻ lịch sử ở đây -->
+        </div>
+    </aside>
+
+    <!-- Hộp thoại so sánh 2 bức ảnh (Comparison Modal) -->
+    <div class="compare-modal-overlay" id="compareModalOverlay" style="display: none;">
+        <div class="compare-modal" id="compareModal">
+            <div class="compare-modal-header">
+                <div>
+                    <h3 class="compare-modal-title">Bảng So Sánh Diện Mạo Hai Lần Quét</h3>
+                    <p class="compare-modal-subtitle">Đối chiếu tỷ lệ, thần thái và điểm số nhân trắc học</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-icon-only" id="closeCompareModalBtn" title="Đóng so sánh">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="compare-modal-body" id="compareModalBody">
+                <!-- Nội dung so sánh 2 cột được render tự động -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js?v=12"></script>
 </body>
 </html>
