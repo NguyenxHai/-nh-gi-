@@ -209,7 +209,13 @@ function generateFallbackAnalysis(metrics) {
 async function handleFaceAnalysis(req, res) {
   let metrics = null;
   try {
-    const { imageBase64, mimeType = 'image/jpeg', metrics: reqMetrics } = req.body;
+    const { 
+      imageBase64, 
+      mimeType = 'image/jpeg', 
+      metrics: reqMetrics,
+      focusMode = 'comprehensive',
+      genderStyle = 'unisex'
+    } = req.body;
     metrics = reqMetrics;
 
     if (!imageBase64) {
@@ -253,8 +259,30 @@ Dưới đây là các thông số hình học được đo đạc chính xác t
 `;
     }
 
-    const promptText = `Bạn hãy quan sát thật kỹ bức ảnh chân dung cụ thể này (nhận diện rõ giới tính, độ tuổi ước tính, chi tiết ngũ quan, khung xương, ánh mắt, nụ cười và sắc da thực tế) kết hợp với số liệu đo đạc đính kèm:
+    // Định hướng phong cách và trọng tâm phân tích từ người dùng
+    let preferenceContext = '';
+
+    if (genderStyle === 'male') {
+      preferenceContext += '\n- ĐỊNH HƯỚNG PHONG CÁCH: NAM GIỚI. Toàn bộ tư vấn kiểu tóc (như undercut, side part, layer nam, two-block, pompadour...), dáng kính và phong cách định hình diện mạo phải phù hợp chuẩn mực với nam giới, toát lên sự nam tính, lịch lãm hoặc mạnh mẽ.';
+    } else if (genderStyle === 'female') {
+      preferenceContext += '\n- ĐỊNH HƯỚNG PHONG CÁCH: NỮ GIỚI. Toàn bộ tư vấn kiểu tóc (như layer uốn sóng, lob ngang vai, mái bay, xoăn lơi, bob cụp...), sắc tố trang điểm và gọng kính phải chuẩn mực cho nữ giới, tôn vinh nét nữ tính, thanh lịch, mềm mại hoặc quyến rũ.';
+    } else {
+      preferenceContext += '\n- ĐỊNH HƯỚNG PHONG CÁCH: UNISEX (TRUNG TÍNH / TỰ NHIÊN). Các đề xuất tạo hình mang tính ứng dụng cao, linh hoạt, hiện đại và tôn nét đẹp tự nhiên.';
+    }
+
+    if (focusMode === 'color_makeup') {
+      preferenceContext += '\n- TRỌNG TÂM PHÂN TÍCH ƯU TIÊN: PERSONAL COLOR & MAKEUP. Ở mục skin_tone, featuresAnalysis và summary, hãy phân tích thật kỹ về undertone, độ sáng của da, độ tương phản ngũ quan; chỉ định cụ thể các gam màu trang phục nên mặc, gam màu nên tránh, màu son và phong cách trang điểm tôn da nhất.';
+    } else if (focusMode === 'hair_glasses') {
+      preferenceContext += '\n- TRỌNG TÂM PHÂN TÍCH ƯU TIÊN: TƯ VẤN KIỂU TÓC & KÍNH MẮT CHUYÊN SÂU. Ở mục recommended_hairstyles và recommended_glasses, hãy phân tích chi tiết cấu trúc xương hàm, gò má và vầng trán; đưa ra 3 kiểu tóc tối ưu từng góc cạnh kèm lý do cụ thể, cùng dáng và chất liệu kính mắt hài hòa nhất.';
+    } else if (focusMode === 'anthropometry') {
+      preferenceContext += '\n- TRỌNG TÂM PHÂN TÍCH ƯU TIÊN: NHÂN TRẮC HỌC CHUYÊN SÂU & TỶ LỆ VÀNG. Ở mục featuresAnalysis và summary, hãy tập trung phân tích khoa học dựa trên các số liệu đo đạc: tỷ lệ ba tầng mặt (trán - mũi - cằm), ngũ nhãn ngang, trục đối xứng và tỷ lệ vàng hình học, phân tích ưu thế cấu trúc xương mặt một cách khoa học và thuyết phục.';
+    } else {
+      preferenceContext += '\n- TRỌNG TÂM PHÂN TÍCH: TOÀN DIỆN. Đánh giá cân bằng, toàn diện giữa nhân trắc học, tỷ lệ vàng, sắc tố diện mạo và tư vấn phong cách.';
+    }
+
+    const promptText = `Bạn hãy quan sát thật kỹ bức ảnh chân dung cụ thể này (nhận diện rõ giới tính, độ tuổi ước tính, chi tiết ngũ quan, khung xương, ánh mắt, nụ cười và sắc da thực tế) kết hợp với số liệu đo đạc và yêu cầu tùy biến:
 ${metricsContext}
+${preferenceContext}
 
 YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUYỆT ĐỐI KHÔNG DÙNG VĂN MẪU HOẶC NỘI DUNG LẶP LẠI):
 1. Hệ động vật diện mạo (vibe_type): Quan sát thần thái và nét mặt trong ảnh để phân loại chính xác vào hệ khí chất động vật phù hợp (ví dụ: Hệ Mèo kiêu kỳ sắc sảo, Hệ Cún ngọt ngào thân thiện, Hệ Cáo thông minh cuốn hút, Hệ Hươu thanh thuần thoát tục, Hệ Thỏ trong trẻo dịu dàng, Hệ Sói bí ẩn cá tính, Hệ Báo sắc bén mạnh mẽ, Hệ Gấu ấm áp vững chãi...). Nêu rõ lý do cụ thể vì sao đường nét của gương mặt này tạo nên khí chất đó.
