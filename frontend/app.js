@@ -61,6 +61,11 @@ const compareModalBody = document.getElementById('compareModalBody');
 const STORAGE_HISTORY_KEY = 'face_analyzer_history_v1';
 let selectedScansForCompare = [];
 
+// Thành phần hiển thị bộ đếm số lượt phân tích trong tuần
+const weeklyFaceCount = document.getElementById('weeklyFaceCount');
+const BASE_WEEKLY_COUNT = 1248;
+const STORAGE_WEEKLY_COUNT_KEY = 'face_analyzer_weekly_count';
+
 // Các thành phần đèn báo trạng thái trực quan HUD
 const hudLightingDot = document.getElementById('hudLightingDot');
 const hudLightingVal = document.getElementById('hudLightingVal');
@@ -1247,6 +1252,9 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
 
             // Tự động lưu lần phân tích này vào lịch sử trình duyệt
             saveScanToHistory(finalData, calculatedMetrics, lastAnalyzedImageBase64);
+
+            // Tự động tăng số lượng khuôn mặt đã phân tích trong tuần thêm 1 lượt
+            incrementWeeklyScanCount();
         } else {
             resultBody.innerHTML = `<div class="error-message">${resData.message || 'Không thể thực hiện đánh giá. Vui lòng kiểm tra lại cấu hình hệ thống.'}</div>`;
             resultBody.style.display = 'block';
@@ -1699,8 +1707,46 @@ function closeCompareModal() {
     }
 }
 
+// Đọc số lượng khuôn mặt phân tích trong tuần từ bộ nhớ cục bộ
+function getWeeklyScanCount() {
+    try {
+        const stored = localStorage.getItem(STORAGE_WEEKLY_COUNT_KEY);
+        if (stored) {
+            const val = parseInt(stored, 10);
+            if (!isNaN(val) && val >= BASE_WEEKLY_COUNT) {
+                return val;
+            }
+        }
+    } catch (e) {
+        console.warn('Lỗi đọc số đếm tuần:', e);
+    }
+    return BASE_WEEKLY_COUNT;
+}
+
+// Cập nhật số đếm hiển thị trên thanh thông báo
+function updateWeeklyScanCountDisplay() {
+    if (!weeklyFaceCount) return;
+    const count = getWeeklyScanCount();
+    weeklyFaceCount.textContent = count.toLocaleString('en-US');
+}
+
+// Tăng số lượng phân tích trong tuần thêm 1 sau mỗi lần chụp
+function incrementWeeklyScanCount() {
+    try {
+        const current = getWeeklyScanCount();
+        const next = current + 1;
+        localStorage.setItem(STORAGE_WEEKLY_COUNT_KEY, next.toString());
+        updateWeeklyScanCountDisplay();
+    } catch (e) {
+        console.warn('Lỗi tăng số đếm tuần:', e);
+    }
+}
+
 // Khởi chạy ứng dụng
 window.addEventListener('DOMContentLoaded', async () => {
+    // Khởi tạo hiển thị bộ đếm số lượt phân tích trong tuần
+    updateWeeklyScanCountDisplay();
+
     // Khởi tạo hiển thị số lượng trong lịch sử
     renderHistoryDrawer();
 
