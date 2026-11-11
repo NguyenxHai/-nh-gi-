@@ -206,6 +206,49 @@ function generateFallbackAnalysis(metrics) {
       horizontalProportions: `Độ rộng mắt chiếm ${eyeRatio.toFixed(1)}% bề ngang khuôn mặt, tiệm cận tiêu chuẩn ngũ nhãn chuẩn mực.`,
       symmetry: `Độ đối xứng hai bên đạt ${sym.toFixed(1)}%, hai nửa khuôn mặt có sự đồng điệu cao qua trục trung tâm.`
     },
+    expertPanel: {
+      anthropologist: {
+        expertTitle: 'Chuyên gia Nhân trắc học & Tỷ lệ vàng',
+        focusBadge: 'Nhân trắc học & Khung xương',
+        analysis: `Cấu trúc khuôn mặt có tỷ lệ ba tầng đạt mức ${foreheadPct.toFixed(1)}% : ${nosePct.toFixed(1)}% : ${chinPct.toFixed(1)}%, độ đối xứng hai bên trục đạt ${sym.toFixed(1)}%. Khung xương có độ cân bằng tốt giữa chiều ngang và chiều dọc.`,
+        keyPoint: 'Khung xương vững chãi, các chỉ số nhân trắc học tiệm cận chuẩn mực cân đối.'
+      },
+      aesthetician: {
+        expertTitle: 'Giám đốc Nghệ thuật & Sắc tố Diện mạo',
+        focusBadge: 'Sắc thái & Khí chất',
+        analysis: `Ngũ quan toát lên năng lượng thuộc ${vibe.toLowerCase()}. Đôi mắt có hồn và đường nét tươi sáng, làn da hài hòa với ${skinTone.toLowerCase()}.`,
+        keyPoint: 'Thần thái tự nhiên, đường nét ngũ quan có sức hút riêng biệt.'
+      },
+      stylist: {
+        expertTitle: 'Chuyên gia Tạo hình & Định hình Phong cách',
+        focusBadge: 'Tạo hình & Ứng dụng',
+        analysis: `Với khuôn mặt ${faceShape.toLowerCase()}, chiến lược tạo mẫu tối ưu là tập trung vào các đường sóng nhẹ hoặc tỉa tầng để làm nổi bật xương gò má và đôi mắt, kết hợp ${glasses.toLowerCase()}.`,
+        keyPoint: 'Ưu tiên các kiểu tóc có độ phồng tự nhiên để tôn vinh trọn vẹn đường nét.'
+      },
+      debateDiscussion: 'Hội đồng chuyên môn nhận định: Chuyên gia nhân trắc học đánh giá cao sự cân đối của khung xương trục giữa. Giám đốc nghệ thuật nhấn mạnh sức hút từ thần thái đôi mắt và sắc da tự nhiên. Chuyên gia tạo hình đề xuất các giải pháp tóc và kính mắt nhằm điều tiết tỷ lệ hài hòa nhất.',
+      consensusVerdict: 'Cả ba chuyên gia thống nhất rằng khuôn mặt sở hữu nền tảng nhân trắc học vững vàng cùng khí chất đặc trưng. Việc định hình kiểu tóc và phụ kiện phù hợp sẽ giúp tôn vinh trọn vẹn vẻ đẹp riêng.'
+    },
+    advancedAesthetics: {
+      anthropometrics: {
+        midfaceRatioAnalysis: metrics?.midfaceRatioText || 'Tầng giữa có tỷ lệ xấp xỉ 33.3%, phân bổ cân đối theo chuẩn mực giải phẫu.',
+        canthalTiltAnalysis: metrics?.canthalTiltDesc || 'Độ nghiêng trục mắt ở mức thăng bằng tự nhiên, ánh nhìn hài hòa.',
+        fwhrAnalysis: metrics?.fwhrText || '1.85 (Khung mặt có tỷ lệ bề ngang cân đối chuẩn mực).',
+        jawAngleAnalysis: `Đường viền xương hàm ${faceShape.toLowerCase()}, độ mở góc hàm thanh thoát, cân xứng với tỷ lệ ngũ quan.`
+      },
+      visualWeight: {
+        category: metrics?.visualWeightCategory || (eyeRatio > 21 ? 'High Visual Weight (Mặt Đậm Nét)' : 'Low Visual Weight (Mặt Thanh Nhạt)'),
+        description: metrics?.visualWeightDesc || 'Ngũ quan phân bổ hài hòa trên khuôn mặt, tỷ lệ giữa các điểm nhấn và khoảng trống đạt độ cân bằng tự nhiên.',
+        makeupStylingTip: metrics?.visualWeightStyling || 'Lựa chọn layout trang điểm nhẹ nhàng trong trẻo hoặc nhấn son ấm để tôn vẻ đẹp tự nhiên.'
+      },
+      fourHighsThreeLows: {
+        scoreText: metrics?.fourHighsThreeLowsScore || 'Độ nổi khối 3D hài hòa theo nét đẹp tự nhiên',
+        description: metrics?.fourHighsThreeLowsDesc || 'Cấu trúc Tứ Cao Tam Thấp có sự liên kết mượt mà giữa các điểm nhô trán, chóp mũi, môi và cằm, tạo góc nghiêng thanh thoát.'
+      },
+      visualAge: {
+        tendency: metrics?.visualAgeTendency || (foreheadPct > 34 ? 'Thiên hướng Trẻ Thơ Thanh Thuần (Neoteny)' : 'Thiên hướng Trưởng Thành Quý Phái (Maturity)'),
+        description: metrics?.visualAgeDesc || 'Tỷ lệ các tầng mặt cân đối tạo nên diện mạo vừa giữ được nét thanh xuân tươi tắn vừa mang phong thái chững chạc, cuốn hút.'
+      }
+    },
     summary: 'Khuôn mặt sở hữu đường nét ngũ quan hài hòa và khí chất tự nhiên nổi bật. Hãy tự tin tôn vinh vẻ đẹp riêng thông qua phong cách tóc và phụ kiện phù hợp.'
   };
 }
@@ -260,11 +303,18 @@ async function handleFaceAnalysis(req, res) {
       const score10Val = typeof metrics.calculatedScore10 === 'number' ? metrics.calculatedScore10 : 8.5;
 
       metricsContext = `
-Dưới đây là các thông số hình học được đo đạc chính xác từ các điểm mốc trên khuôn mặt:
+Dưới đây là các thông số hình học được đo đạc chính xác từ các điểm mốc trên khuôn mặt (hệ tọa độ 3 chiều MediaPipe):
 - Tỷ lệ ba phần chiều dọc (Trán : Mũi : Cằm): ${metrics.verticalRatioText || 'Không xác định'} (Tỷ lệ chuẩn mực tham chiếu là 1.0 : 1.0 : 1.0 hay 33.3% - 33.3% - 33.3%).
 - Tỷ lệ năm phần chiều ngang: Độ rộng mắt chiếm ${metrics.horizontalEyeRatioText || 'Không xác định'} bề ngang khuôn mặt (Tỷ lệ tham chiếu theo quy tắc ngũ nhãn là xấp xỉ 20%).
 - Độ đối xứng hai bên khuôn mặt: ${metrics.symmetryScoreText || 'Không xác định'}.
 - Tỷ lệ chiều ngang / chiều dài mặt: ${metrics.faceRatio ? metrics.faceRatio.toFixed(2) : 'Không xác định'}.
+- Tỷ lệ tầng mặt giữa (Midface ratio): ${metrics.midfaceRatioText || 'Không xác định'}.
+- Độ nghiêng trục mắt (Canthal Tilt): ${metrics.canthalTiltType || 'Không xác định'} (${metrics.canthalTiltDesc || ''}).
+- Tỷ lệ FWHR (Chiều ngang gò má / Chiều cao ngũ quan): ${metrics.fwhrText || 'Không xác định'}.
+- Thông số góc nghiêng đầu (Head Pose): ${metrics.headPoseText || 'Không xác định'}.
+- Trọng lượng thị giác đo đạc sơ bộ (Visual Weight): ${metrics.visualWeightCategory || 'Không xác định'} (${metrics.visualWeightDesc || ''}).
+- Cấu trúc Tứ Cao Tam Thấp 3D: ${metrics.fourHighsThreeLowsScore || 'Không xác định'}.
+- Xu hướng độ tuổi thị giác: ${metrics.visualAgeTendency || 'Không xác định'}.
 - Điểm cân đối hài hòa đã được máy đo đạc chính xác bằng toán học: ${score100Text} (tương đương ${score10Val.toFixed(1)}/10).
 `;
 
@@ -315,6 +365,17 @@ YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUY�
    - horizontalProportions: Nhận xét tỷ lệ bề ngang và khoảng cách hai mắt theo số liệu thực tế.
    - symmetry: Nhận xét mức độ cân xứng hai bên mặt theo số liệu thực tế.
 7. Lời đúc kết diện mạo (summary): Đúc kết 2-3 câu tinh tế, tôn vinh nét đẹp riêng biệt và sức hút tự nhiên của người trong ảnh.
+8. Mô phỏng 3 góc nhìn chuyên môn và cuộc tranh luận của hội đồng thẩm định (expertPanel):
+   - Đóng vai 3 chuyên gia đầu ngành cùng thẩm định bức ảnh này:
+     + Chuyên gia Nhân trắc học & Tỷ lệ vàng (anthropologist): Phân tích cấu trúc khung xương, tỷ lệ ba tầng dọc, ngũ nhãn ngang và độ đối xứng hình học.
+     + Giám đốc Nghệ thuật & Sắc tố Diện mạo (aesthetician): Đánh giá thần thái ngũ quan, hệ khí chất vibe động vật, sắc thái da Personal Color và sức hút thị giác.
+     + Chuyên gia Tạo hình & Định hình Phong cách (stylist): Đưa ra chiến lược tối ưu hóa đường nét qua kiểu tóc, phom gọng kính và phong cách tạo hình.
+   - Cuộc đối thoại tranh luận của hội đồng (debateDiscussion): Mô phỏng cuộc đối thoại ngắn, sắc bén giữa 3 chuyên gia (mỗi chuyên gia nêu nhận xét, phản biện hoặc bổ trợ góc nhìn cho nhau trước khi thống nhất).
+   - Kết luận thống nhất của hội đồng (consensusVerdict): Đúc kết chung có tính đồng thuận cao nhất của cả 3 chuyên gia về diện mạo này.
+9. Đánh giá Nhân trắc học & Thẩm mỹ chuyên sâu (advancedAesthetics) qua 3 lăng kính chuyên môn:
+   - Lăng kính 1: Giải phẫu & Tỷ lệ học (anthropometrics): Phân tích chi tiết Midface ratio (tỷ lệ tầng mặt giữa), Canthal Tilt (độ nghiêng trục mắt Dương/Âm/Ngang), FWHR, độ mở góc hàm và tỷ lệ 1/3, 1/5.
+   - Lăng kính 2: Thẩm mỹ Á Đông & Trọng lượng thị giác (visualWeight - 濃顔 vs 淡顔): Xác định khuôn mặt thuộc nhóm High Visual Weight (Ngũ quan đậm, to, sắc nét, ít khoảng trống -> hợp phong cách Glam, Tây, cổ điển) hay Low Visual Weight (Ngũ quan thanh mảnh, nhiều khoảng trắng, mềm mại -> hợp phong cách Clean Girl, Bạch nguyệt quang, Hàn Quốc nhẹ nhàng) hay cân bằng; kèm phân tích độ tuổi thị giác (Neoteny/Trẻ thơ vs Maturity/Trưởng thành) và độ nổi khối 3D Tứ Cao Tam Thấp.
+   - Lăng kính 3: Chuyên gia Định hình Phong cách (styling & makeup): Dựa chính xác vào trọng lượng thị giác và khuyết điểm tỷ lệ để tư vấn kiểu tóc (cụ thể phần mái, độ phồng), dáng kính, layout trang điểm và bảng màu HEX tôn da.
 
 QUY ĐỊNH BẮT BUỘC:
 - BẮT BUỘC toàn bộ nội dung phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH (sắc, huyền, hỏi, ngã, nặng) và nguyên âm có dấu (ă, â, ê, ô, ơ, ư, đ).
@@ -323,8 +384,18 @@ QUY ĐỊNH BẮT BUỘC:
 
     const generateConfig = {
       temperature: 0.1,
-      maxOutputTokens: 1200,
-      systemInstruction: 'Bạn là một Chuyên gia nhân trắc học, thẩm mỹ học và tư vấn phong cách chuyên nghiệp. BẮT BUỘC: Mọi nhận định, mô tả và nội dung trả về phải được viết bằng TIẾNG VIỆT CÓ DẤU ĐẦY ĐỦ, chuẩn ngữ pháp, dấu thanh và chính tả tiếng Việt. TUYỆT ĐỐI KHÔNG ĐƯỢC VIẾT TIẾNG VIỆT KHÔNG DẤU, KHÔNG DÙNG VĂN MẪU RẬP KHUÔN, phải quan sát ảnh thật kỹ để phân tích chính xác từng khuôn mặt riêng biệt.',
+      maxOutputTokens: 2800,
+      systemInstruction: `Bạn là Hệ thống Phân tích Nhân trắc học & Thẩm mỹ AI cao cấp.
+Người dùng cung cấp ảnh chụp kèm thông số đo đạc 3D từ MediaPipe (đây là số liệu chuẩn, KHÔNG tự ý thay đổi điểm số toán học này).
+
+Nếu ảnh chụp hơi nghiêng (dựa vào thông số yaw/pitch/roll), hãy tự động nội suy cấu trúc xương 3D để đánh giá khách quan nhất, không trừ điểm đối xứng do góc máy.
+
+Hãy phân tích khuôn mặt cực kỳ chi tiết qua 3 lăng kính chuyên môn:
+1. Giải phẫu & Tỷ lệ học (Anthropometrics): Phân tích Midface ratio (tỷ lệ tầng mặt giữa), Canthal Tilt (độ nghiêng trục mắt Dương/Âm/Ngang), FWHR, độ mở góc hàm và tỷ lệ 1/3, 1/5.
+2. Thẩm mỹ Á Đông & Trọng lượng thị giác (Visual Weight): Xác định khuôn mặt thuộc nhóm "High Visual Weight" (Ngũ quan đậm, sắc nét) hay "Low Visual Weight" (Ngũ quan thanh mảnh, nhiều khoảng trắng), phân tích độ tuổi thị giác (Neoteny/Trẻ thơ vs Maturity/Trưởng thành) và phân loại Hệ khuôn mặt (Mèo, Cáo, Cún, Hươu, Rắn...).
+3. Chuyên gia Định hình Phong cách (Styling & Personal Color): Dựa chính xác vào trọng lượng thị giác và khuyết điểm tỷ lệ ở bước 1 & 2 để tư vấn kiểu tóc (cụ thể phần mái, độ phồng), dáng kính, layout trang điểm và bảng màu HEX tôn da.
+
+Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải chỉ rõ đặc điểm quan sát được trên mắt, mũi, môi, xương hàm của người trong ảnh. BẮT BUỘC toàn bộ nội dung phải được viết bằng tiếng Việt chuẩn ngữ pháp, đầy đủ dấu thanh và nguyên âm có dấu, tuyệt đối không dùng biểu tượng cảm xúc (emoji hoặc icon).`,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -394,6 +465,100 @@ QUY ĐỊNH BẮT BUỘC:
             },
             required: ['eyes', 'nose', 'lips', 'jawline', 'verticalProportions', 'horizontalProportions', 'symmetry']
           },
+          expertPanel: {
+            type: Type.OBJECT,
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Hội đồng 3 chuyên gia thẩm định đa chiều và tranh luận',
+            properties: {
+              anthropologist: {
+                type: Type.OBJECT,
+                description: 'Góc nhìn của Chuyên gia Nhân trắc học & Tỷ lệ vàng',
+                properties: {
+                  expertTitle: { type: Type.STRING, description: 'Chuyên gia Nhân trắc học & Tỷ lệ vàng' },
+                  focusBadge: { type: Type.STRING, description: 'Nhân trắc học & Khung xương' },
+                  analysis: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận định chuyên sâu về cấu trúc khung xương, tỷ lệ 3 tầng trán - mũi - cằm, ngũ nhãn ngang và độ đối xứng trục hình học' },
+                  keyPoint: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đúc kết cốt lõi của chuyên gia nhân trắc học' }
+                },
+                required: ['expertTitle', 'focusBadge', 'analysis', 'keyPoint']
+              },
+              aesthetician: {
+                type: Type.OBJECT,
+                description: 'Góc nhìn của Giám đốc Nghệ thuật & Sắc tố Diện mạo',
+                properties: {
+                  expertTitle: { type: Type.STRING, description: 'Giám đốc Nghệ thuật & Sắc tố Diện mạo' },
+                  focusBadge: { type: Type.STRING, description: 'Sắc thái & Khí chất' },
+                  analysis: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Nhận định về khí chất ngũ quan, hệ vibe động vật, thần thái ánh mắt và sắc thái màu da cá nhân' },
+                  keyPoint: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đúc kết cốt lõi của giám đốc nghệ thuật' }
+                },
+                required: ['expertTitle', 'focusBadge', 'analysis', 'keyPoint']
+              },
+              stylist: {
+                type: Type.OBJECT,
+                description: 'Góc nhìn của Chuyên gia Tạo hình & Định hình Phong cách',
+                properties: {
+                  expertTitle: { type: Type.STRING, description: 'Chuyên gia Tạo hình & Định hình Phong cách' },
+                  focusBadge: { type: Type.STRING, description: 'Tạo hình & Ứng dụng' },
+                  analysis: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Phân tích chiến lược điều tiết góc cạnh diện mạo bằng kiểu tóc, phom gọng kính và phong cách toàn diện' },
+                  keyPoint: { type: Type.STRING, description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đúc kết cốt lõi của chuyên gia tạo hình' }
+                },
+                required: ['expertTitle', 'focusBadge', 'analysis', 'keyPoint']
+              },
+              debateDiscussion: {
+                type: Type.STRING,
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đoạn đối thoại và tranh luận ngắn gọn giữa 3 chuyên gia nhằm phản biện và bổ trợ góc nhìn cho nhau trước khi đưa ra kết luận'
+              },
+              consensusVerdict: {
+                type: Type.STRING,
+                description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Kết luận thống nhất chung sau phiên hội ý và tranh luận của hội đồng 3 chuyên gia'
+              }
+            },
+            required: ['anthropologist', 'aesthetician', 'stylist', 'debateDiscussion', 'consensusVerdict']
+          },
+          advancedAesthetics: {
+            type: Type.OBJECT,
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Đánh giá nhân trắc học chuyên sâu qua 3 lăng kính chuyên môn',
+            properties: {
+              anthropometrics: {
+                type: Type.OBJECT,
+                description: 'Lăng kính 1: Giải phẫu & Tỷ lệ học',
+                properties: {
+                  midfaceRatioAnalysis: { type: Type.STRING, description: 'Phân tích Midface ratio tỷ lệ tầng mặt giữa' },
+                  canthalTiltAnalysis: { type: Type.STRING, description: 'Phân tích Canthal Tilt độ nghiêng trục mắt Dương/Âm/Ngang' },
+                  fwhrAnalysis: { type: Type.STRING, description: 'Phân tích FWHR tỷ lệ chiều ngang gò má so với chiều cao ngũ quan' },
+                  jawAngleAnalysis: { type: Type.STRING, description: 'Phân tích độ mở góc hàm và cấu trúc khung xương' }
+                },
+                required: ['midfaceRatioAnalysis', 'canthalTiltAnalysis', 'fwhrAnalysis', 'jawAngleAnalysis']
+              },
+              visualWeight: {
+                type: Type.OBJECT,
+                description: 'Lăng kính 2: Thẩm mỹ Á Đông & Trọng lượng thị giác',
+                properties: {
+                  category: { type: Type.STRING, description: 'High Visual Weight (Mặt đậm nét) hoặc Low Visual Weight (Mặt thanh nhạt) hoặc Cân bằng' },
+                  description: { type: Type.STRING, description: 'Phân tích kích thước ngũ quan, độ tương phản và khoảng trống' },
+                  makeupStylingTip: { type: Type.STRING, description: 'Lời khuyên layout trang điểm và phong cách phù hợp' }
+                },
+                required: ['category', 'description', 'makeupStylingTip']
+              },
+              fourHighsThreeLows: {
+                type: Type.OBJECT,
+                description: 'Tỷ lệ Tứ Cao – Tam Thấp 3D',
+                properties: {
+                  scoreText: { type: Type.STRING, description: 'Đánh giá mức độ chuẩn mực của cấu trúc Tứ Cao Tam Thấp' },
+                  description: { type: Type.STRING, description: 'Phân tích độ nổi khối 3D của trán, chóp mũi, đỉnh môi, đỉnh cằm và các điểm trũng' }
+                },
+                required: ['scoreText', 'description']
+              },
+              visualAge: {
+                type: Type.OBJECT,
+                description: 'Độ tuổi thị giác',
+                properties: {
+                  tendency: { type: Type.STRING, description: 'Nét Trẻ Thơ Thanh Thuần (Neoteny) hoặc Nét Trưởng Thành Quý Phái (Maturity) hoặc Hài Hòa Cân Bằng' },
+                  description: { type: Type.STRING, description: 'Phân tích tỷ lệ mắt, trán, sống mũi và xương hàm tạo nên độ tuổi thị giác' }
+                },
+                required: ['tendency', 'description']
+              }
+            },
+            required: ['anthropometrics', 'visualWeight', 'fourHighsThreeLows', 'visualAge']
+          },
           summary: {
             type: Type.STRING,
             description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Lời đúc kết tổng quan diện mạo'
@@ -408,17 +573,19 @@ QUY ĐỊNH BẮT BUỘC:
           'faceShape',
           'harmonyScore',
           'featuresAnalysis',
+          'expertPanel',
+          'advancedAesthetics',
           'summary'
         ]
       }
     };
 
     const candidateModels = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
       'gemini-3.6-flash',
       'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-3.5-flash-lite',
-      'gemini-3.5-flash'
+      'gemini-3.8-flash'
     ];
 
     let response = null;
@@ -467,6 +634,8 @@ QUY ĐỊNH BẮT BUỘC:
       skin_tone: parsedData.skin_tone,
       recommended_hairstyles: parsedData.recommended_hairstyles,
       recommended_glasses: parsedData.recommended_glasses,
+      expertPanel: parsedData.expertPanel,
+      advancedAesthetics: parsedData.advancedAesthetics,
       data: parsedData,
       isDemo: false
     });
@@ -481,6 +650,8 @@ QUY ĐỊNH BẮT BUỘC:
       skin_tone: fallbackData.skin_tone,
       recommended_hairstyles: fallbackData.recommended_hairstyles,
       recommended_glasses: fallbackData.recommended_glasses,
+      expertPanel: fallbackData.expertPanel,
+      advancedAesthetics: fallbackData.advancedAesthetics,
       data: fallbackData,
       isDemo: true,
       notice: 'Dịch vụ trí tuệ nhân tạo tạm thời bận. Hệ thống đã chuyển tiếp sang phân tích nhân trắc học hình học tức thì.'
