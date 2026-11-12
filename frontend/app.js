@@ -66,6 +66,15 @@ const weeklyFaceCount = document.getElementById('weeklyFaceCount');
 const BASE_WEEKLY_COUNT = 1248;
 const STORAGE_WEEKLY_COUNT_KEY = 'face_analyzer_weekly_count';
 
+// Các thành phần thanh cài đặt tương tác trước khi chụp
+let isAROverlayEnabled = true;
+let currentGenderStyle = 'unisex';
+let currentFocusMode = 'comprehensive';
+
+const arMeshToggle = document.getElementById('arMeshToggle');
+const genderStylePills = document.querySelectorAll('#genderStylePills .btn-setting-pill');
+const focusModePills = document.querySelectorAll('#focusModePills .btn-setting-pill');
+
 // Các thành phần đèn báo trạng thái trực quan HUD
 const hudLightingDot = document.getElementById('hudLightingDot');
 const hudLightingVal = document.getElementById('hudLightingVal');
@@ -287,10 +296,11 @@ function startLiveARLoop() {
                         if (results && results.faceLandmarks && results.faceLandmarks.length > 0) {
                             const landmarks = results.faceLandmarks[0];
 
-                            if (drawingUtils) {
+                            // Chỉ vẽ lớp phủ AR và đường gióng tỷ lệ vàng khi người dùng bật công tắc
+                            if (isAROverlayEnabled && drawingUtils) {
                                 // 1. Vẽ các đường viền ngũ quan (mắt, mũi, môi, hàm) màu Neon Cyan
                                 drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_CONTOURS, {
-                                    color: 'rgba(0, 242, 254, 0.42)',
+                                    color: 'rgba(0, 242, 254, 0.45)',
                                     lineWidth: 1.2
                                 });
 
@@ -314,9 +324,41 @@ function startLiveARLoop() {
                                         arCtx.fill();
                                     }
                                 });
+
+                                // 4. Vẽ trực tiếp các trục Tỷ lệ vàng (Golden Ratio) trên khuôn mặt thời gian thực
+                                const foreheadTop = landmarks[10];
+                                const glabella = landmarks[168];
+                                const subnasale = landmarks[2];
+                                const chinBottom = landmarks[152];
+                                const jawRight = landmarks[234];
+                                const jawLeft = landmarks[454];
+
+                                if (foreheadTop && chinBottom && jawRight && jawLeft) {
+                                    // Trục trung tâm khuôn mặt
+                                    arCtx.lineWidth = 1;
+                                    arCtx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+                                    arCtx.setLineDash([3, 3]);
+                                    arCtx.beginPath();
+                                    arCtx.moveTo(glabella.x * width, foreheadTop.y * height - 10);
+                                    arCtx.lineTo(chinBottom.x * width, chinBottom.y * height + 10);
+                                    arCtx.stroke();
+
+                                    // Các đường gióng ngang tỷ lệ vàng ba tầng mặt
+                                    arCtx.strokeStyle = 'rgba(168, 85, 247, 0.55)';
+                                    arCtx.setLineDash([2, 2]);
+                                    const linesY = [foreheadTop.y, glabella.y, subnasale.y, chinBottom.y];
+                                    linesY.forEach(normY => {
+                                        arCtx.beginPath();
+                                        arCtx.moveTo(jawRight.x * width - 15, normY * height);
+                                        arCtx.lineTo(jawLeft.x * width + 15, normY * height);
+                                        arCtx.stroke();
+                                    });
+                                    arCtx.setLineDash([]);
+                                }
                                 arCtx.restore();
                             }
 
+                            // Vẫn liên tục đánh giá góc mặt, cự ly và ánh sáng cho thanh HUD
                             evaluateRealtimeFace(landmarks, width, height);
                         } else {
                             resetRealtimeStatus();
@@ -573,50 +615,145 @@ function checkImageLuminance(imageSourceElement) {
     return totalLuminance / pixelCount;
 }
 
-// Hàm tính khoảng cách Euclid giữa 2 điểm pixel
+// Hàm tính khoảng cách Euclid 3 chiều (kết hợp trục x, y và trục chiều sâu z của MediaPipe)
 function calculateDistance(p1, p2) {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
-    return Math.sqrt(dx * dx + dy * dy);
+    const dz = (p2.z !== undefined && p1.z !== undefined) ? (p2.z - p1.z) : 0;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-// Hàm tính khoảng cách vuông góc từ điểm đến đường thẳng tạo bởi 2 điểm
+// Hàm tính khoảng cách vuông góc từ điểm đến đường thẳng trong không gian 3 chiều
 function pointToLineDistance(p, l1, l2) {
-    const numerator = Math.abs((l2.y - l1.y) * p.x - (l2.x - l1.x) * p.y + l2.x * l1.y - l2.y * l1.x);
-    const denominator = Math.sqrt(Math.pow(l2.y - l1.y, 2) + Math.pow(l2.x - l1.x, 2));
-    return denominator === 0 ? 0 : numerator / denominator;
+    const vx = l2.x - l1.x;
+    const vy = l2.y - l1.y;
+    const vz = (l2.z !== undefined && l1.z !== undefined) ? (l2.z - l1.z) : 0;
+
+    const wx = p.x - l1.x;
+    const wy = p.y - l1.y;
+    const wz = (p.z !== undefined && l1.z !== undefined) ? (p.z - l1.z) : 0;
+
+    // Tích có hướng w x v
+    const cx = wy * vz - wz * vy;
+    const cy = wz * vx - wx * vz;
+    const cz = wx * vy - wy * vx;
+
+    const crossMag = Math.sqrt(cx * cx + cy * cy + cz * cz);
+    const lineMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
+
+    return lineMag === 0 ? 0 : crossMag / lineMag;
 }
 
 // Trích xuất điểm mốc và tính toán các chỉ số hình học khuôn mặt
 function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
-    // Chuyển đổi tọa độ chuẩn hóa sang tọa độ pixel thực tế
-    const toPx = (point) => ({
+    // Chuyển đổi tọa độ chuẩn hóa sang tọa độ pixel 3 chiều ban đầu
+    const rawToPx = (point) => ({
         x: point.x * width,
-        y: point.y * height
+        y: point.y * height,
+        z: (point.z !== undefined ? point.z : 0) * width
     });
 
-    // Các điểm mốc quan trọng theo chuẩn MediaPipe Face Mesh
-    const foreheadTop = toPx(landmarks[10]);     // Chân tóc / Đỉnh trán
-    const glabella = toPx(landmarks[168]);        // Giữa hai chân mày
-    const noseTip = toPx(landmarks[1]);           // Chóp mũi
-    const subnasale = toPx(landmarks[2]);         // Chân mũi
-    const chinBottom = toPx(landmarks[152]);      // Đỉnh cằm
+    // 1. Xác định vị trí 2 tâm mắt trước khi chuẩn hóa góc nghiêng
+    const rawEyeRightOuter = rawToPx(landmarks[33]);
+    const rawEyeRightInner = rawToPx(landmarks[133]);
+    const rawEyeLeftInner = rawToPx(landmarks[362]);
+    const rawEyeLeftOuter = rawToPx(landmarks[263]);
 
-    const eyeRightOuter = toPx(landmarks[33]);    // Khóe mắt ngoài bên phải
-    const eyeRightInner = toPx(landmarks[133]);   // Khóe mắt trong bên phải
-    const eyeLeftInner = toPx(landmarks[362]);    // Khóe mắt trong bên trái
-    const eyeLeftOuter = toPx(landmarks[263]);    // Khóe mắt ngoài bên trái
+    const rightEyeCenter = {
+        x: (rawEyeRightOuter.x + rawEyeRightInner.x) / 2,
+        y: (rawEyeRightOuter.y + rawEyeRightInner.y) / 2,
+        z: (rawEyeRightOuter.z + rawEyeRightInner.z) / 2
+    };
 
-    const mouthRight = toPx(landmarks[61]);       // Khóe miệng bên phải
-    const mouthLeft = toPx(landmarks[291]);       // Khóe miệng bên trái
+    const leftEyeCenter = {
+        x: (rawEyeLeftOuter.x + rawEyeLeftInner.x) / 2,
+        y: (rawEyeLeftOuter.y + rawEyeLeftInner.y) / 2,
+        z: (rawEyeLeftOuter.z + rawEyeLeftInner.z) / 2
+    };
 
-    const jawRight = toPx(landmarks[234]);        // Điểm gò má / hàm bên phải
-    const jawLeft = toPx(landmarks[454]);         // Điểm gò má / hàm bên trái
+    // 2. Chuẩn hóa theo trục nghiêng (Roll & Yaw Normalization)
+    // Tính góc nghiêng Roll của đường nối 2 tâm mắt so với trục ngang: theta = atan2(dy, dx)
+    const deltaX = leftEyeCenter.x - rightEyeCenter.x;
+    const deltaY = leftEyeCenter.y - rightEyeCenter.y;
+    const thetaRoll = Math.atan2(deltaY, deltaX);
 
-    // 1. Tính tỷ lệ 3 phần chiều dọc (trán : mũi : cằm)
-    const foreheadDist = Math.abs(glabella.y - foreheadTop.y);
-    const noseDist = Math.abs(subnasale.y - glabella.y);
-    const chinDist = Math.abs(chinBottom.y - subnasale.y);
+    // Tính góc xoay Yaw nếu mặt hơi quay nghiêng trái/phải
+    const deltaZ = leftEyeCenter.z - rightEyeCenter.z;
+    const distXY = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const thetaYaw = Math.atan2(deltaZ, distXY);
+
+    // Điểm tựa xoay chuẩn hóa (trung điểm của hai mắt)
+    const pivot = {
+        x: (leftEyeCenter.x + rightEyeCenter.x) / 2,
+        y: (leftEyeCenter.y + rightEyeCenter.y) / 2,
+        z: (leftEyeCenter.z + rightEyeCenter.z) / 2
+    };
+
+    // Xoay toàn bộ hệ tọa độ 468 điểm ngược lại góc -theta để đưa mặt về thẳng đứng hoàn hảo
+    const cosRoll = Math.cos(-thetaRoll);
+    const sinRoll = Math.sin(-thetaRoll);
+    const cosYaw = Math.cos(-thetaYaw);
+    const sinYaw = Math.sin(-thetaYaw);
+
+    const normalizePoint = (rawPt) => {
+        // Bước 1: Khử góc nghiêng Roll quanh trục Z (mặt phẳng XY)
+        const dx1 = rawPt.x - pivot.x;
+        const dy1 = rawPt.y - pivot.y;
+        const x1 = pivot.x + (dx1 * cosRoll - dy1 * sinRoll);
+        const y1 = pivot.y + (dx1 * sinRoll + dy1 * cosRoll);
+        const z1 = rawPt.z;
+
+        // Bước 2: Khử góc xoay Yaw quanh trục Y (mặt phẳng XZ)
+        const dx2 = x1 - pivot.x;
+        const dz2 = z1 - pivot.z;
+        const x2 = pivot.x + (dx2 * cosYaw - dz2 * sinYaw);
+        const y2 = y1;
+        const z2 = pivot.z + (dx2 * sinYaw + dz2 * cosYaw);
+
+        return { x: x2, y: y2, z: z2 };
+    };
+
+    // Lưu tọa độ gốc chưa xoay để vẽ khung hiển thị và trích xuất màu da khớp chính xác với ảnh chụp
+    const rawForeheadTop = rawToPx(landmarks[10]);
+    const rawGlabella = rawToPx(landmarks[168]);
+    const rawNoseTip = rawToPx(landmarks[1]);
+    const rawSubnasale = rawToPx(landmarks[2]);
+    const rawChinBottom = rawToPx(landmarks[152]);
+    const rawMouthRight = rawToPx(landmarks[61]);
+    const rawMouthLeft = rawToPx(landmarks[291]);
+    const rawJawRight = rawToPx(landmarks[234]);
+    const rawJawLeft = rawToPx(landmarks[454]);
+    const rawLipTop = rawToPx(landmarks[0]);
+    const rawLipBottom = rawToPx(landmarks[17]);
+    const rawChinGroove = rawToPx(landmarks[18]);
+
+    // Các điểm mốc quan trọng đã được chuẩn hóa về tư thế thẳng đứng hoàn hảo trong không gian toán học
+    const foreheadTop = normalizePoint(rawForeheadTop);     // Chân tóc / Đỉnh trán
+    const glabella = normalizePoint(rawGlabella);           // Giữa hai chân mày
+    const noseTip = normalizePoint(rawNoseTip);             // Chóp mũi
+    const subnasale = normalizePoint(rawSubnasale);         // Chân mũi
+    const chinBottom = normalizePoint(rawChinBottom);       // Đỉnh cằm
+
+    const eyeRightOuter = normalizePoint(rawEyeRightOuter);
+    const eyeRightInner = normalizePoint(rawEyeRightInner);
+    const eyeLeftInner = normalizePoint(rawEyeLeftInner);
+    const eyeLeftOuter = normalizePoint(rawEyeLeftOuter);
+
+    const mouthRight = normalizePoint(rawMouthRight);       // Khóe miệng bên phải
+    const mouthLeft = normalizePoint(rawMouthLeft);         // Khóe miệng bên trái
+
+    const jawRight = normalizePoint(rawJawRight);           // Điểm gò má / hàm bên phải
+    const jawLeft = normalizePoint(rawJawLeft);             // Điểm gò má / hàm bên trái
+
+    const lipTop = normalizePoint(rawLipTop);               // Đỉnh môi trên
+    const lipBottom = normalizePoint(rawLipBottom);         // Đáy môi dưới
+    const chinGroove = normalizePoint(rawChinGroove);       // Rãnh cằm môi
+
+    // 1. Tính tỷ lệ 3 phần chiều dọc trong không gian 3D (trán : mũi : cằm)
+    // Áp dụng khoảng cách Euclid 3D để bù trừ khi người dùng hơi cúi đầu hoặc ngửa đầu
+    const foreheadDist = calculateDistance(foreheadTop, glabella);
+    const noseDist = calculateDistance(glabella, subnasale);
+    const chinDist = calculateDistance(subnasale, chinBottom);
 
     const totalVertical = foreheadDist + noseDist + chinDist;
     const foreheadPct = totalVertical > 0 ? (foreheadDist / totalVertical) * 100 : 33.3;
@@ -677,8 +814,8 @@ function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.drawImage(sourceElement, 0, 0, width, height);
 
-        const sampleX = Math.round((noseTip.x + jawRight.x) / 2);
-        const sampleY = Math.round((noseTip.y + subnasale.y) / 2);
+        const sampleX = Math.round((rawNoseTip.x + rawJawRight.x) / 2);
+        const sampleY = Math.round((rawNoseTip.y + rawSubnasale.y) / 2);
 
         if (sampleX > 0 && sampleX < width && sampleY > 0 && sampleY < height) {
             const pixel = tempCtx.getImageData(sampleX, sampleY, 1, 1).data;
@@ -688,21 +825,116 @@ function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
         skinWarmth = 15;
     }
 
+    // 5. Tính toán điểm số cân đối nhân trắc học cố định bằng toán học
+    // Căn cứ khách quan trên 3 tiêu chí hình học:
+    // - Độ đối xứng 2 bên mặt (trọng số 45%)
+    // - Độ phân bổ tỷ lệ vàng 3 tầng mặt so với mốc lý tưởng 33.3% - 33.3% - 33.3% (trọng số 35%)
+    // - Độ rộng mắt so với quy tắc ngũ nhãn 20.0% (trọng số 20%)
+    const verticalVariance = Math.abs(33.33 - foreheadPct) + Math.abs(33.33 - nosePct) + Math.abs(33.33 - chinPct);
+    const horizontalVariance = Math.abs(20.0 - eyeRatioPercent);
+    const symmetryDeficit = Math.max(0, 100 - overallSymmetry);
+
+    const penaltySymmetry = symmetryDeficit * 0.42;
+    const penaltyVertical = verticalVariance * 0.65;
+    const penaltyHorizontal = horizontalVariance * 0.70;
+
+    const rawScore100 = 100 - penaltySymmetry - penaltyVertical - penaltyHorizontal;
+    const calculatedScore100 = Math.min(98.5, Math.max(72.0, Math.round(rawScore100 * 10) / 10));
+    const calculatedScore10 = Math.round((calculatedScore100 / 10) * 10) / 10;
+
+    // 6. Tính toán Độ nghiêng trục mắt (Canthal Tilt)
+    const canthalTiltRight = Math.atan2(eyeRightOuter.y - eyeRightInner.y, eyeRightOuter.x - eyeRightInner.x) * (180 / Math.PI);
+    const canthalTiltLeft = Math.atan2(eyeLeftInner.y - eyeLeftOuter.y, eyeLeftInner.x - eyeLeftOuter.x) * (180 / Math.PI);
+    const avgCanthalTilt = (canthalTiltRight + canthalTiltLeft) / 2;
+    let canthalTiltType = 'Ngang (Neutral Canthal Tilt)';
+    let canthalTiltDesc = 'Đuôi mắt và khóe mắt trong nằm trên trục thăng bằng tự nhiên, ánh nhìn hài hòa và thanh thuần.';
+    if (avgCanthalTilt > 2.0) {
+        canthalTiltType = 'Dương (Positive Canthal Tilt)';
+        canthalTiltDesc = 'Đuôi mắt xếch nhẹ cao hơn khóe mắt trong, tạo ánh nhìn sắc sảo, kiêu kỳ và cuốn hút.';
+    } else if (avgCanthalTilt < -2.0) {
+        canthalTiltType = 'Âm (Negative Canthal Tilt)';
+        canthalTiltDesc = 'Đuôi mắt thấp hơn khóe mắt trong, tạo ánh nhìn hiền hòa, ấm áp và đáng yêu.';
+    }
+
+    // 7. Tính toán Tỷ lệ tầng mặt giữa (Midface Ratio)
+    const midfaceRatioVal = totalVertical > 0 ? (noseDist / totalVertical) : 0.333;
+    const midfaceRatioText = `${(midfaceRatioVal * 100).toFixed(1)}% (${midfaceRatioVal < 0.325 ? 'Tầng giữa ngắn, mang lại nét trẻ trung thanh thuần' : midfaceRatioVal > 0.345 ? 'Tầng giữa dài, toát lên nét trưởng thành quý phái' : 'Tỷ lệ tầng giữa chuẩn mực cân đối'})`;
+
+    // 8. Tính toán Tỷ lệ bề ngang so với chiều cao ngũ quan (FWHR)
+    const upperFaceHeight = calculateDistance(glabella, lipTop);
+    const fwhrVal = upperFaceHeight > 0 ? (faceWidth / upperFaceHeight) : 1.85;
+    const fwhrText = `${fwhrVal.toFixed(2)} (${fwhrVal > 1.95 ? 'Khung mặt rộng, cấu trúc xương hàm vững chãi' : fwhrVal < 1.75 ? 'Khung mặt thon gọn, thanh mảnh' : 'Tỷ lệ bề ngang cân bằng chuẩn mực'})`;
+
+    // 9. Thông số góc nghiêng đầu (Head Pose) phục vụ nội suy không gian 3 chiều
+    const yawAngle = (thetaYaw * 180 / Math.PI).toFixed(1);
+    const rollAngle = (thetaRoll * 180 / Math.PI).toFixed(1);
+    const headPoseText = `Góc nghiêng Roll: ${rollAngle}°, Góc xoay Yaw: ${yawAngle}° (đã được thuật toán nội suy và chuẩn hóa về tư thế thẳng đứng trong không gian toán học 3 chiều).`;
+
+    // 10. Tính toán Trọng lượng thị giác (Visual Weight - 濃顔 vs 淡顔)
+    const mouthWidth = calculateDistance(mouthRight, mouthLeft);
+    const mouthRatio = faceWidth > 0 ? (mouthWidth / faceWidth) : 0.36;
+    const occupancyScore = (eyeRatioPercent * 2) + (mouthRatio * 100);
+
+    let visualWeightCategory = 'Cân Bằng Hài Hòa';
+    let visualWeightDesc = 'Tỷ lệ ngũ quan và khoảng trống khuôn mặt đạt độ cân đối lý tưởng, đường nét vừa có điểm nhấn vừa giữ được nét thanh thoát tự nhiên.';
+    let visualWeightStyling = 'Dễ dàng biến hóa linh hoạt giữa phong cách tự nhiên hằng ngày và phong cách sắc sảo nổi bật trong các dịp đặc biệt.';
+
+    if (occupancyScore >= 80) {
+        visualWeightCategory = 'High Visual Weight (Mặt Đậm Nét)';
+        visualWeightDesc = 'Ngũ quan to, sắc nét, chiếm tỷ lệ nổi bật trên khuôn mặt, độ tương phản cấu trúc cao, ít khoảng trống thừa.';
+        visualWeightStyling = 'Phù hợp phong cách trang điểm sắc sảo (Glam, phong cách Âu Mỹ, phong cách Hong Kong cổ điển), kiểu tóc uốn lọn sóng bồng bềnh để tạo sự cân đối với ngũ quan lớn.';
+    } else if (occupancyScore <= 73) {
+        visualWeightCategory = 'Low Visual Weight (Mặt Thanh Nhạt)';
+        visualWeightDesc = 'Ngũ quan nhỏ nhắn, thanh tú, khoảng trống trên khuôn mặt phân bổ thoáng đãng, mang vẻ đẹp trong trẻo và mềm mại.';
+        visualWeightStyling = 'Cực kỳ phù hợp phong cách trong trẻo (Clean Girl, phong cách nàng thơ Bạch Nguyệt Quang, tông màu tự nhiên Hàn Quốc), nên ưu tiên lớp trang điểm mỏng nhẹ để giữ nét thanh thuần.';
+    }
+
+    // 11. Tính toán Tỷ lệ Tứ Cao - Tam Thấp (4 Highs, 3 Lows - Độ nổi khối 3D)
+    const deltaZNose = glabella.z - noseTip.z;
+    const deltaZLip = subnasale.z - lipTop.z;
+    const deltaZChin = chinGroove.z - chinBottom.z;
+    const depth3DIndex = Math.round((Math.max(0, deltaZNose) * 1.5 + Math.max(0, deltaZChin) + Math.max(0, deltaZLip)) * 10) / 10;
+
+    let fourHighsThreeLowsScore = 'Độ nổi khối 3D rõ nét, sống mũi và cằm đạt độ nhô thanh thoát';
+    let fourHighsThreeLowsDesc = 'Cấu trúc Tứ Cao Tam Thấp đạt độ nhô lập thể cao: vầng trán đầy đặn, sống mũi thẳng cao tạo góc nghiêng thanh tú, đỉnh cằm và môi trên có độ cong lập thể chuẩn mực.';
+    if (depth3DIndex <= 15) {
+        fourHighsThreeLowsScore = 'Độ nổi khối mềm mại, hài hòa theo nét đẹp Á Đông tự nhiên';
+        fourHighsThreeLowsDesc = 'Đường nét chuyển tiếp giữa 4 điểm cao (trán, chóp mũi, môi, cằm) và 3 điểm thấp (gốc mũi, nhân trung, rãnh cằm) diễn ra êm dịu, tạo vẻ đẹp dịu dàng và thanh thoát.';
+    }
+
+    // 12. Tính toán Độ tuổi thị giác (Neoteny vs Maturity)
+    let neotenyPoints = 0;
+    if (nosePct < 32.5) neotenyPoints += 1.5;
+    if (foreheadPct > 34.0) neotenyPoints += 1.0;
+    if (chinPct < 32.5) neotenyPoints += 1.0;
+    if (eyeRatioPercent > 20.8) neotenyPoints += 1.0;
+    if (faceRatio > 0.83) neotenyPoints += 1.0;
+
+    let visualAgeTendency = 'Hài Hòa Giữa Nét Trẻ Trung & Quý Phái';
+    let visualAgeDesc = 'Sự kết hợp cân đối giữa vầng trán tươi sáng và sống mũi thanh tú giúp diện mạo vừa giữ được nét thanh xuân tươi tắn vừa mang vẻ thanh lịch, cuốn hút.';
+    if (neotenyPoints >= 3.0) {
+        visualAgeTendency = 'Thiên hướng Trẻ Thơ Thanh Thuần (Neoteny)';
+        visualAgeDesc = 'Tỷ lệ tầng trán đầy đặn kết hợp tầng giữa ngắn và đường viền cằm mềm mại tạo nên diện mạo trẻ trung hơn tuổi thật, toát lên sự ngọt ngào, trong sáng.';
+    } else if (neotenyPoints <= 1.0) {
+        visualAgeTendency = 'Thiên hướng Trưởng Thành Quý Phái (Maturity)';
+        visualAgeDesc = 'Sống mũi dài thanh thoát, cấu trúc xương hàm sắc nét và cằm thon dài toát lên thần thái sang trọng, đằm thắm và khí chất quý phái của sự trưởng thành.';
+    }
+
     return {
         points: {
-            foreheadTop,
-            glabella,
-            noseTip,
-            subnasale,
-            chinBottom,
-            eyeRightOuter,
-            eyeRightInner,
-            eyeLeftInner,
-            eyeLeftOuter,
-            mouthRight,
-            mouthLeft,
-            jawRight,
-            jawLeft
+            foreheadTop: rawForeheadTop,
+            glabella: rawGlabella,
+            noseTip: rawNoseTip,
+            subnasale: rawSubnasale,
+            chinBottom: rawChinBottom,
+            eyeRightOuter: rawEyeRightOuter,
+            eyeRightInner: rawEyeRightInner,
+            eyeLeftInner: rawEyeLeftInner,
+            eyeLeftOuter: rawEyeLeftOuter,
+            mouthRight: rawMouthRight,
+            mouthLeft: rawMouthLeft,
+            jawRight: rawJawRight,
+            jawLeft: rawJawLeft
         },
         foreheadPct,
         nosePct,
@@ -714,7 +946,24 @@ function extractAndCalculateMetrics(landmarks, width, height, sourceElement) {
         symmetryScoreText,
         faceRatio,
         eyeSlant,
-        skinWarmth
+        skinWarmth,
+        canthalTiltType,
+        canthalTiltDesc,
+        midfaceRatioVal,
+        midfaceRatioText,
+        fwhrVal,
+        fwhrText,
+        headPoseText,
+        visualWeightCategory,
+        visualWeightDesc,
+        visualWeightStyling,
+        fourHighsThreeLowsScore,
+        fourHighsThreeLowsDesc,
+        visualAgeTendency,
+        visualAgeDesc,
+        calculatedScore100,
+        calculatedScore10,
+        scoreSummaryText: `${calculatedScore100.toFixed(1)}/100 (tương đương ${calculatedScore10.toFixed(1)}/10)`
     };
 }
 
@@ -784,7 +1033,13 @@ function normalizeVietnamese(text) {
 
 // Hiển thị kết quả phân tích có cấu trúc dưới dạng thẻ trực quan
 function renderStructuredAnalysis(data, isDemo, notice) {
-    const scoreVal = typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5;
+    // Luôn ưu tiên điểm số toán học cố định do máy đo đạc chính xác từ các điểm mốc
+    let scoreVal = 8.5;
+    if (lastAnalyzedMetrics && typeof lastAnalyzedMetrics.calculatedScore10 === 'number') {
+        scoreVal = lastAnalyzedMetrics.calculatedScore10;
+    } else if (typeof data.harmonyScore === 'number') {
+        scoreVal = data.harmonyScore;
+    }
     const scorePercent = Math.min(100, Math.max(0, scoreVal * 10));
 
     // Thông báo trạng thái kết nối API
@@ -816,6 +1071,265 @@ function renderStructuredAnalysis(data, isDemo, notice) {
         `).join('');
     } else {
         hairstylesHtml = '<p class="part-desc">Đang cập nhật các kiểu tóc phù hợp.</p>';
+    }
+
+    // Xử lý góc nhìn 3 chuyên gia và tranh luận hội đồng
+    let expertPanelHtml = '';
+    const panel = data.expertPanel;
+    if (panel && panel.anthropologist && panel.aesthetician && panel.stylist) {
+        expertPanelHtml = `
+        <!-- Hội đồng 3 chuyên gia thẩm định đa chiều -->
+        <div class="expert-panel-section">
+            <div class="expert-panel-header">
+                <span class="expert-panel-tag">Hội Đồng Thẩm Định Đa Chiều</span>
+                <h3 class="parts-section-title">Đánh Giá Chuyên Môn & Tranh Luận Hội Đồng</h3>
+                <p class="expert-panel-subtitle">Ba chuyên gia thẩm định độc lập từ ba góc nhìn chuyên sâu và tiến hành thảo luận, phản biện trước khi thống nhất giải pháp tạo hình tối ưu.</p>
+            </div>
+
+            <div class="expert-cards-grid">
+                <!-- Chuyên gia 1: Nhân trắc học -->
+                <div class="expert-card expert-card-anthropologist">
+                    <div class="expert-card-top">
+                        <span class="expert-badge expert-badge-cyan">${normalizeVietnamese(panel.anthropologist.focusBadge) || 'Nhân trắc học & Khung xương'}</span>
+                        <h4 class="expert-name">${normalizeVietnamese(panel.anthropologist.expertTitle) || 'Chuyên gia Nhân trắc học'}</h4>
+                    </div>
+                    <p class="expert-analysis">${normalizeVietnamese(panel.anthropologist.analysis)}</p>
+                    <div class="expert-keypoint">
+                        <span class="keypoint-label">Điểm cốt lõi:</span>
+                        <span class="keypoint-text">${normalizeVietnamese(panel.anthropologist.keyPoint)}</span>
+                    </div>
+                </div>
+
+                <!-- Chuyên gia 2: Giám đốc Nghệ thuật & Sắc tố -->
+                <div class="expert-card expert-card-aesthetician">
+                    <div class="expert-card-top">
+                        <span class="expert-badge expert-badge-purple">${normalizeVietnamese(panel.aesthetician.focusBadge) || 'Sắc thái & Khí chất'}</span>
+                        <h4 class="expert-name">${normalizeVietnamese(panel.aesthetician.expertTitle) || 'Giám đốc Nghệ thuật & Sắc tố'}</h4>
+                    </div>
+                    <p class="expert-analysis">${normalizeVietnamese(panel.aesthetician.analysis)}</p>
+                    <div class="expert-keypoint">
+                        <span class="keypoint-label">Điểm cốt lõi:</span>
+                        <span class="keypoint-text">${normalizeVietnamese(panel.aesthetician.keyPoint)}</span>
+                    </div>
+                </div>
+
+                <!-- Chuyên gia 3: Chuyên gia Tạo hình & Phong cách -->
+                <div class="expert-card expert-card-stylist">
+                    <div class="expert-card-top">
+                        <span class="expert-badge expert-badge-amber">${normalizeVietnamese(panel.stylist.focusBadge) || 'Tạo hình & Ứng dụng'}</span>
+                        <h4 class="expert-name">${normalizeVietnamese(panel.stylist.expertTitle) || 'Chuyên gia Tạo hình & Phong cách'}</h4>
+                    </div>
+                    <p class="expert-analysis">${normalizeVietnamese(panel.stylist.analysis)}</p>
+                    <div class="expert-keypoint">
+                        <span class="keypoint-label">Điểm cốt lõi:</span>
+                        <span class="keypoint-text">${normalizeVietnamese(panel.stylist.keyPoint)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biên bản đối thoại & Tranh luận của Hội đồng -->
+            <div class="debate-box">
+                <div class="debate-header">
+                    <span class="debate-tag">Biên Bản Đối Thoại & Tranh Luận Hội Đồng</span>
+                </div>
+                <p class="debate-content">${normalizeVietnamese(panel.debateDiscussion)}</p>
+                <div class="debate-verdict-box">
+                    <span class="verdict-label">Kết luận Thống nhất Chung cuộc:</span>
+                    <p class="verdict-text">${normalizeVietnamese(panel.consensusVerdict)}</p>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
+    // Xử lý khối phân tích thẩm mỹ chuyên sâu
+    let advancedAestheticsHtml = '';
+    const adv = data.advancedAesthetics;
+    const vWeight = adv?.visualWeight || {
+        category: lastAnalyzedMetrics?.visualWeightCategory || 'Cân Bằng Hài Hòa',
+        description: lastAnalyzedMetrics?.visualWeightDesc || 'Ngũ quan và khoảng trống phân bổ cân đối tự nhiên.',
+        makeupStylingTip: lastAnalyzedMetrics?.visualWeightStyling || 'Trang điểm tự nhiên, tôn nét thanh tú.'
+    };
+    const fourHighs = adv?.fourHighsThreeLows || {
+        scoreText: lastAnalyzedMetrics?.fourHighsThreeLowsScore || 'Độ nổi khối 3D hài hòa theo nét đẹp tự nhiên',
+        description: lastAnalyzedMetrics?.fourHighsThreeLowsDesc || 'Đường nét chuyển tiếp mượt mà giữa các điểm nhô và điểm trũng.'
+    };
+    const vAge = adv?.visualAge || {
+        tendency: lastAnalyzedMetrics?.visualAgeTendency || 'Hài Hòa Giữa Nét Trẻ Trung & Quý Phái',
+        description: lastAnalyzedMetrics?.visualAgeDesc || 'Tỷ lệ các tầng mặt cân đối tạo diện mạo thanh lịch.'
+    };
+    const canthalText = lastAnalyzedMetrics?.canthalTiltType || 'Ngang (Neutral Canthal Tilt)';
+    const canthalDesc = lastAnalyzedMetrics?.canthalTiltDesc || 'Đuôi mắt và khóe mắt cân bằng tự nhiên.';
+    const midfaceText = lastAnalyzedMetrics?.midfaceRatioText || '33.3% (Tỷ lệ tầng giữa chuẩn mực)';
+    const fwhrText = lastAnalyzedMetrics?.fwhrText || '1.85 (Tỷ lệ bề ngang cân đối)';
+
+    advancedAestheticsHtml = `
+    <!-- Khối phân tích nhân trắc học thẩm mỹ chuyên sâu -->
+    <div class="advanced-aesthetics-section">
+        <div class="advanced-aesthetics-header">
+            <span class="aesthetics-section-tag">Nhân Trắc Học Thẩm Mỹ Chuyên Sâu</span>
+            <h3 class="parts-section-title">Trọng Lượng Thị Giác & Độ Nổi Khối Không Gian 3D</h3>
+            <p class="aesthetics-section-subtitle">Đánh giá chuyên sâu về độ đậm nhạt ngũ quan, tỷ lệ Tứ Cao Tam Thấp, độ tuổi thị giác và giải phẫu tỷ lệ vàng.</p>
+        </div>
+
+        <div class="aesthetics-cards-grid">
+            <!-- Thẻ 1: Trọng lượng thị giác -->
+            <div class="aesthetic-card aesthetic-card-weight">
+                <div class="aesthetic-card-header">
+                    <span class="aesthetic-badge badge-weight">${normalizeVietnamese(vWeight.category)}</span>
+                    <h4 class="aesthetic-card-title">Trọng Lượng Thị Giác</h4>
+                </div>
+                <p class="aesthetic-card-desc">${normalizeVietnamese(vWeight.description)}</p>
+                <div class="aesthetic-tip-box">
+                    <span class="tip-label">Định hướng phong cách & trang điểm:</span>
+                    <p class="tip-text">${normalizeVietnamese(vWeight.makeupStylingTip)}</p>
+                </div>
+            </div>
+
+            <!-- Thẻ 2: Tứ Cao - Tam Thấp 3D -->
+            <div class="aesthetic-card aesthetic-card-contour">
+                <div class="aesthetic-card-header">
+                    <span class="aesthetic-badge badge-contour">Tứ Cao – Tam Thấp 3D</span>
+                    <h4 class="aesthetic-card-title">Độ Nổi Khối Không Gian 3D</h4>
+                </div>
+                <div class="contour-highlight">
+                    <span class="contour-score-label">Nhận định nổi khối:</span>
+                    <span class="contour-score-value">${normalizeVietnamese(fourHighs.scoreText)}</span>
+                </div>
+                <p class="aesthetic-card-desc">${normalizeVietnamese(fourHighs.description)}</p>
+                <div class="contour-guide-pills">
+                    <span class="pill-high">Tứ Cao: Trán, Mũi, Môi, Cằm</span>
+                    <span class="pill-low">Tam Thấp: Gốc mũi, Nhân trung, Rãnh cằm</span>
+                </div>
+            </div>
+
+            <!-- Thẻ 3: Độ tuổi thị giác -->
+            <div class="aesthetic-card aesthetic-card-age">
+                <div class="aesthetic-card-header">
+                    <span class="aesthetic-badge badge-age">${normalizeVietnamese(vAge.tendency)}</span>
+                    <h4 class="aesthetic-card-title">Độ Tuổi Thị Giác</h4>
+                </div>
+                <p class="aesthetic-card-desc">${normalizeVietnamese(vAge.description)}</p>
+                <div class="age-spectrum-row">
+                    <span class="spectrum-tag">Trẻ Thơ (Neoteny)</span>
+                    <div class="spectrum-line"></div>
+                    <span class="spectrum-tag">Trưởng Thành (Maturity)</span>
+                </div>
+            </div>
+
+            <!-- Thẻ 4: Giải phẫu & Tỷ lệ học -->
+            <div class="aesthetic-card aesthetic-card-metrics">
+                <div class="aesthetic-card-header">
+                    <span class="aesthetic-badge badge-metrics">Giải Phẫu & Tỷ Lệ</span>
+                    <h4 class="aesthetic-card-title">Chỉ Số Trục Mắt & Khung Xương</h4>
+                </div>
+                <div class="metrics-list-compact">
+                    <div class="metric-row">
+                        <span class="m-label">Trục mắt (Canthal Tilt):</span>
+                        <span class="m-val">${normalizeVietnamese(canthalText)}</span>
+                    </div>
+                    <p class="metric-sub">${normalizeVietnamese(canthalDesc)}</p>
+                    <div class="metric-row">
+                        <span class="m-label">Tầng mặt giữa (Midface):</span>
+                        <span class="m-val">${normalizeVietnamese(midfaceText)}</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="m-label">Tỷ lệ bề ngang (FWHR):</span>
+                        <span class="m-val">${normalizeVietnamese(fwhrText)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    // Xử lý khối Thẩm mỹ Á Đông & Khí chất Diện mạo chuyên sâu
+    let asianAestheticsHtml = '';
+    const asian = data.asianAesthetics || {
+        visualWeight: data.visualWeight,
+        boneVsSoftTissue: data.boneVsSoftTissue,
+        visualAgeMatrix: data.visualAgeMatrix,
+        asianArchetype: data.asianArchetype,
+        tailoredAsianStyling: data.tailoredAsianStyling
+    };
+
+    if (asian && (asian.visualWeight || asian.boneVsSoftTissue || asian.asianArchetype || asian.tailoredAsianStyling)) {
+        const vW = asian.visualWeight || {};
+        const bST = asian.boneVsSoftTissue || {};
+        const vAM = asian.visualAgeMatrix || {};
+        const aArch = asian.asianArchetype || {};
+        const tStyling = asian.tailoredAsianStyling || {};
+
+        asianAestheticsHtml = `
+        <!-- Hệ thống Thẩm mỹ Á Đông & Khí chất Diện mạo -->
+        <div class="asian-aesthetics-section">
+            <div class="asian-aesthetics-header">
+                <span class="asian-section-tag">Thẩm Mỹ Á Đông & Khí Chất Diện Mạo</span>
+                <h3 class="parts-section-title">Ma Trận Cốt Tướng, Trọng Lượng Thị Giác & Tạo Hình Á Đông</h3>
+                <p class="asian-section-subtitle">Đánh giá theo các tiêu chuẩn thẩm mỹ phương Đông: Nùng nhan vs Đạm nhan, Cốt tướng vs Bì tướng, Ma trận tuổi tác Neoteny và Kỹ thuật Đầu bao mặt.</p>
+            </div>
+
+            <div class="asian-cards-grid">
+                <!-- Thẻ 1: Khí chất diện mạo & Hệ động vật -->
+                <div class="asian-card asian-card-archetype">
+                    <div class="asian-card-header">
+                        <span class="asian-badge badge-archetype">${normalizeVietnamese(aArch.animalType) || 'Khí Chất Á Đông'}</span>
+                        <h4 class="asian-card-title">${normalizeVietnamese(aArch.vibeTitle) || 'Khí Chất Diện Mạo'}</h4>
+                    </div>
+                    <p class="asian-card-desc">${normalizeVietnamese(aArch.detailedExplanation) || 'Đường nét ngũ quan toát lên khí chất riêng biệt và thần thái tự nhiên.'}</p>
+                </div>
+
+                <!-- Thẻ 2: Nùng Nhan vs Đạm Nhan (Độ Lưu Bạch) -->
+                <div class="asian-card asian-card-weight">
+                    <div class="asian-card-header">
+                        <span class="asian-badge badge-weight">${normalizeVietnamese(vW.category) || 'Đạm Nhan (Thanh Nhạt)'}</span>
+                        <h4 class="asian-card-title">Độ Lưu Bạch & Trọng Lượng Thị Giác</h4>
+                    </div>
+                    <p class="asian-card-desc">${normalizeVietnamese(vW.blankSpaceAnalysis) || 'Tỷ lệ ngũ quan và khoảng trống khuôn mặt có sự phân bổ hài hòa.'}</p>
+                </div>
+
+                <!-- Thẻ 3: Cốt Tướng vs Bì Tướng -->
+                <div class="asian-card asian-card-bone">
+                    <div class="asian-card-header">
+                        <span class="asian-badge badge-bone">${normalizeVietnamese(bST.dominantType) || 'Cân Bằng Cốt - Bì'}</span>
+                        <h4 class="asian-card-title">Cốt Tướng vs Bì Tướng & Đường Viền</h4>
+                    </div>
+                    <p class="asian-card-desc">${normalizeVietnamese(bST.contourSmoothness) || 'Đường viền khuôn mặt chuyển tiếp mềm mại, độ liên kết khung xương tự nhiên.'}</p>
+                    <div class="asian-sub-point">
+                        <span class="sub-label">Tứ Cao - Tam Thấp 3D:</span>
+                        <span class="sub-val">${normalizeVietnamese(bST.fourHighsThreeLows) || 'Độ nổi khối 3D hài hòa.'}</span>
+                    </div>
+                </div>
+
+                <!-- Thẻ 4: Ma Trận Tuổi Tác Thị Giác -->
+                <div class="asian-card asian-card-age">
+                    <div class="asian-card-header">
+                        <span class="asian-badge badge-age">${normalizeVietnamese(vAM.neotenyVsMaturity) || 'Hài Hòa Trẻ Thơ - Trưởng Thành'}</span>
+                        <h4 class="asian-card-title">Ma Trận Tuổi Tác Neoteny</h4>
+                    </div>
+                    <p class="asian-card-desc">${normalizeVietnamese(vAM.midfaceAndPhiltrum) || 'Tỷ lệ tầng mặt giữa và nhân trung phân bổ cân đối.'}</p>
+                </div>
+
+                <!-- Thẻ 5: Tạo Hình Á Đông & Đầu Bao Mặt -->
+                <div class="asian-card asian-card-styling full-width-card">
+                    <div class="asian-card-header">
+                        <span class="asian-badge badge-styling">Tạo Hình Á Đông Độc Quyền</span>
+                        <h4 class="asian-card-title">Layout Trang Điểm & Kỹ Thuật Đầu Bao Mặt (High Cranial Top)</h4>
+                    </div>
+                    <div class="asian-styling-content">
+                        <div class="styling-subblock">
+                            <span class="styling-label">Phong cách trang điểm đề xuất:</span>
+                            <p class="styling-text">${normalizeVietnamese(tStyling.makeupStyle) || 'Lối trang điểm nhẹ nhàng, tôn vẻ đẹp tự nhiên.'}</p>
+                        </div>
+                        <div class="styling-subblock">
+                            <span class="styling-label">Kỹ thuật tạo kiểu tóc đầu bao mặt:</span>
+                            <p class="styling-text">${normalizeVietnamese(tStyling.cranialHairTip) || 'Tạo độ phồng tự nhiên ở chân tóc để tôn dáng mặt thanh thoát.'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
     }
 
     resultBody.innerHTML = `
@@ -854,6 +1368,12 @@ function renderStructuredAnalysis(data, isDemo, notice) {
                 <span class="shape-value">${normalizeVietnamese(data.faceShape) || 'Hài hòa cân đối'}</span>
             </div>
         </div>
+
+        ${expertPanelHtml}
+
+        ${advancedAestheticsHtml}
+
+        ${asianAestheticsHtml}
 
         <!-- Đề xuất 3 kiểu tóc phù hợp nhất -->
         <div class="hairstyles-section">
@@ -918,7 +1438,12 @@ function updateStoryCardContent(data, metrics, imageBase64) {
         storyVibeBadgeVal.textContent = normalizeVietnamese(data.vibe_type) || 'Hài hòa';
     }
 
-    const scoreVal = typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.8;
+    let scoreVal = 8.8;
+    if (metrics && typeof metrics.calculatedScore10 === 'number') {
+        scoreVal = metrics.calculatedScore10;
+    } else if (typeof data.harmonyScore === 'number') {
+        scoreVal = data.harmonyScore;
+    }
     if (storyScoreBig) {
         storyScoreBig.textContent = scoreVal.toFixed(1);
     }
@@ -1226,7 +1751,9 @@ async function processAndAnalyze(imageSourceElement, imageBase64, mimeType, isFr
             body: JSON.stringify({
                 imageBase64: imageBase64,
                 mimeType: mimeType,
-                metrics: calculatedMetrics
+                metrics: calculatedMetrics,
+                focusMode: currentFocusMode,
+                genderStyle: currentGenderStyle
             })
         }).then(res => res.json());
 
@@ -1355,7 +1882,9 @@ async function saveScanToHistory(data, metrics, imageBase64) {
             data: data,
             metrics: metrics,
             vibe_type: data.vibe_type || 'Chưa xác định',
-            harmonyScore: typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5,
+            harmonyScore: (metrics && typeof metrics.calculatedScore10 === 'number')
+                ? metrics.calculatedScore10
+                : (typeof data.harmonyScore === 'number' ? data.harmonyScore : 8.5),
             faceShape: data.faceShape || 'Trái xoan',
             skin_tone: data.skin_tone || 'Tone tự nhiên',
             eye_shape: data.eye_shape || 'Dáng mắt tự nhiên'
@@ -1749,6 +2278,39 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Khởi tạo hiển thị số lượng trong lịch sử
     renderHistoryDrawer();
+
+    // Gắn sự kiện nút gạt lớp phủ AR & Tỷ lệ vàng
+    if (arMeshToggle) {
+        arMeshToggle.addEventListener('change', (e) => {
+            isAROverlayEnabled = e.target.checked;
+            if (!isAROverlayEnabled && arCanvas && arCanvas.width) {
+                const arCtx = arCanvas.getContext('2d');
+                arCtx.clearRect(0, 0, arCanvas.width, arCanvas.height);
+            }
+        });
+    }
+
+    // Gắn sự kiện chọn phong cách hướng tới (Nam / Nữ / Unisex)
+    if (genderStylePills && genderStylePills.length > 0) {
+        genderStylePills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                genderStylePills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                currentGenderStyle = pill.getAttribute('data-gender') || 'unisex';
+            });
+        });
+    }
+
+    // Gắn sự kiện chọn chế độ phân tích chuyên sâu (Focus Mode)
+    if (focusModePills && focusModePills.length > 0) {
+        focusModePills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                focusModePills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                currentFocusMode = pill.getAttribute('data-focus') || 'comprehensive';
+            });
+        });
+    }
 
     // Gắn sự kiện điều khiển ngăn kéo lịch sử
     if (openHistoryBtn) openHistoryBtn.addEventListener('click', openHistoryDrawer);

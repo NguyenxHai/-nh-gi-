@@ -189,6 +189,37 @@ function generateFallbackAnalysis(metrics) {
     harmonyScore = Math.min(9.8, Math.max(8.0, Math.round(rawScore * 10) / 10));
   }
 
+  // Đánh giá Thẩm mỹ Á Đông & Khí chất
+  const isHighWeight = (eyeRatio > 20.5);
+  const asianAestheticsData = {
+    visualWeight: {
+      category: isHighWeight ? 'Nùng nhan (Đậm nét)' : 'Đạm nhan (Thanh nhạt)',
+      blankSpaceAnalysis: isHighWeight
+        ? 'Ngũ quan chiếm tỷ lệ lớn, độ tương phản sắc sảo, diện tích lưu bạch ít tạo điểm nhấn thị giác tập trung và ấn tượng.'
+        : 'Ngũ quan thanh tú phân bổ thoáng đãng, độ lưu bạch rộng mang lại cảm giác nhẹ nhàng, thanh thoát và trong trẻo chuẩn nét đẹp Á Đông.'
+    },
+    boneVsSoftTissue: {
+      dominantType: faceRatio < 0.80 ? 'Mỹ nhân Cốt tướng' : 'Mỹ nhân Bì tướng',
+      contourSmoothness: 'Đường viền từ thái dương qua gò má xuống hàm chuyển tiếp mượt mà, độ liên kết khung xương hài hòa, không bị gấp khúc.',
+      fourHighsThreeLows: 'Cấu trúc Tứ Cao Tam Thấp đạt độ nổi khối 3D cân đối, trán và chóp mũi tạo góc nghiêng thanh tú, môi và cằm có độ cong lập thể chuẩn mực.'
+    },
+    visualAgeMatrix: {
+      neotenyVsMaturity: foreheadPct > 34 ? '65% Nét trẻ thơ (Neoteny) - 35% Trưởng thành (Maturity)' : '35% Nét trẻ thơ (Neoteny) - 65% Trưởng thành (Maturity)',
+      midfaceAndPhiltrum: `Tầng mặt giữa chiếm ${nosePct.toFixed(1)}% chiều dọc, nhân trung có tỷ lệ cân đối với cằm, duy trì sự hài hòa giữa nét tươi trẻ và quý phái.`
+    },
+    asianArchetype: {
+      vibeTitle: foreheadPct > 34 ? 'Bạch Nguyệt Quang trong trẻo' : 'Thiên Kim Tài Phiệt thanh lịch',
+      animalType: vibe.split(' - ')[0] || 'Hệ Mèo',
+      detailedExplanation: `Sự kết hợp giữa ${eyeShape.toLowerCase()} và đường nét hàm ${faceShape.toLowerCase()} toát lên khí chất phương Đông thanh nhã và cuốn hút.`
+    },
+    tailoredAsianStyling: {
+      makeupStyle: isHighWeight
+        ? 'Gợi ý layout makeup phong cách Douyin hoặc Hồng Kông cổ điển sắc sảo, nhấn đậm eyeliner và màu môi'
+        : 'Gợi ý layout makeup Clean Girl trong veo hoặc phong cách Hàn Quốc mỏng nhẹ, tôn làn da căng bóng tự nhiên',
+      cranialHairTip: 'Gợi ý kiểu tóc uốn phồng chân tóc tự nhiên (High Cranial Top - Đầu bao mặt) giúp tạo cảm giác khuôn mặt nhỏ gọn và làm mềm đường viền hàm.'
+    }
+  };
+
   return {
     vibe_type: vibe,
     eye_shape: eyeShape,
@@ -203,7 +234,7 @@ function generateFallbackAnalysis(metrics) {
       lips: 'Khuôn miệng duyên dáng, đường nét môi trên và môi dưới mềm mại, tạo nụ cười rạng rỡ.',
       jawline: `Đường viền hàm ${faceShape.toLowerCase()}, góc nghiêng tạo vẻ thanh thoát và hài hòa.`,
       verticalProportions: `Tỷ lệ ba tầng mặt: Trán ${foreheadPct.toFixed(1)}%, Mũi ${nosePct.toFixed(1)}%, Cằm ${chinPct.toFixed(1)}%, phân bổ rất cân đối theo nhân trắc học.`,
-      horizontalProportions: `Độ rộng mắt chiếm ${eyeRatio.toFixed(1)}% bề ngang khuôn mặt, tiệm cận tiêu chuẩn ngũ nhãn chuẩn mực.`,
+      horizontalProportions: `Đ度 rộng mắt chiếm ${eyeRatio.toFixed(1)}% bề ngang khuôn mặt, tiệm cận tiêu chuẩn ngũ nhãn chuẩn mực.`,
       symmetry: `Độ đối xứng hai bên đạt ${sym.toFixed(1)}%, hai nửa khuôn mặt có sự đồng điệu cao qua trục trung tâm.`
     },
     expertPanel: {
@@ -249,6 +280,12 @@ function generateFallbackAnalysis(metrics) {
         description: metrics?.visualAgeDesc || 'Tỷ lệ các tầng mặt cân đối tạo nên diện mạo vừa giữ được nét thanh xuân tươi tắn vừa mang phong thái chững chạc, cuốn hút.'
       }
     },
+    asianAesthetics: asianAestheticsData,
+    visualWeight: asianAestheticsData.visualWeight,
+    boneVsSoftTissue: asianAestheticsData.boneVsSoftTissue,
+    visualAgeMatrix: asianAestheticsData.visualAgeMatrix,
+    asianArchetype: asianAestheticsData.asianArchetype,
+    tailoredAsianStyling: asianAestheticsData.tailoredAsianStyling,
     summary: 'Khuôn mặt sở hữu đường nét ngũ quan hài hòa và khí chất tự nhiên nổi bật. Hãy tự tin tôn vinh vẻ đẹp riêng thông qua phong cách tóc và phụ kiện phù hợp.'
   };
 }
@@ -286,6 +323,14 @@ async function handleFaceAnalysis(req, res) {
         skin_tone: fallbackData.skin_tone,
         recommended_hairstyles: fallbackData.recommended_hairstyles,
         recommended_glasses: fallbackData.recommended_glasses,
+        expertPanel: fallbackData.expertPanel,
+        advancedAesthetics: fallbackData.advancedAesthetics,
+        asianAesthetics: fallbackData.asianAesthetics,
+        visualWeight: fallbackData.visualWeight,
+        boneVsSoftTissue: fallbackData.boneVsSoftTissue,
+        visualAgeMatrix: fallbackData.visualAgeMatrix,
+        asianArchetype: fallbackData.asianArchetype,
+        tailoredAsianStyling: fallbackData.tailoredAsianStyling,
         data: fallbackData,
         isDemo: true,
         notice: 'Hệ thống đang hiển thị kết quả thử nghiệm theo thông số hình học. Hãy cấu hình khóa xác thực để kích hoạt trí tuệ nhân tạo.'
@@ -376,24 +421,79 @@ YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUY�
    - Lăng kính 1: Giải phẫu & Tỷ lệ học (anthropometrics): Phân tích chi tiết Midface ratio (tỷ lệ tầng mặt giữa), Canthal Tilt (độ nghiêng trục mắt Dương/Âm/Ngang), FWHR, độ mở góc hàm và tỷ lệ 1/3, 1/5.
    - Lăng kính 2: Thẩm mỹ Á Đông & Trọng lượng thị giác (visualWeight - 濃顔 vs 淡顔): Xác định khuôn mặt thuộc nhóm High Visual Weight (Ngũ quan đậm, to, sắc nét, ít khoảng trống -> hợp phong cách Glam, Tây, cổ điển) hay Low Visual Weight (Ngũ quan thanh mảnh, nhiều khoảng trắng, mềm mại -> hợp phong cách Clean Girl, Bạch nguyệt quang, Hàn Quốc nhẹ nhàng) hay cân bằng; kèm phân tích độ tuổi thị giác (Neoteny/Trẻ thơ vs Maturity/Trưởng thành) và độ nổi khối 3D Tứ Cao Tam Thấp.
    - Lăng kính 3: Chuyên gia Định hình Phong cách (styling & makeup): Dựa chính xác vào trọng lượng thị giác và khuyết điểm tỷ lệ để tư vấn kiểu tóc (cụ thể phần mái, độ phồng), dáng kính, layout trang điểm và bảng màu HEX tôn da.
+10. Đánh giá Hệ thống Thẩm mỹ Á Đông & Khí chất Diện mạo chuyên sâu (asianAesthetics):
+    - visualWeight: Xác định Nùng nhan (Đậm nét) hoặc Đạm nhan (Thanh nhạt); phân tích chi tiết độ lưu bạch (khoảng trống trên mặt) và độ tương phản ngũ quan.
+    - boneVsSoftTissue: Đánh giá thiên về Mỹ nhân Cốt tướng, Bì tướng hay Cân bằng; đánh giá độ mượt đường viền từ thái dương qua gò má xuống hàm; đánh giá độ nổi khối 3D Tứ Cao - Tam Thấp.
+    - visualAgeMatrix: Tỷ lệ phần trăm Nét trẻ thơ (Neoteny) vs Trưởng thành (Maturity); nhận xét chiều dài tầng mặt giữa và nhân trung.
+    - asianArchetype: vibeTitle (ví dụ: Bạch Nguyệt Quang, Thuần Dục, Thiên Kim Tài Phiệt, Minh Tinh Hồng Kông...); animalType (Hệ Mèo, Cáo, Cún, Hươu, Thỏ, Cá, hoặc Rắn); detailedExplanation (giải thích vì sao ngũ quan tạo nên khí chất này).
+    - tailoredAsianStyling: makeupStyle (gợi ý layout makeup Douyin, Clean Girl, Hàn Quốc trong veo, Hồng Kông cổ điển... phù hợp với Visual Weight); cranialHairTip (gợi ý kiểu tóc giúp tạo hiệu ứng Đầu bao mặt High Cranial Top và che khuyết điểm viền hàm).
 
 QUY ĐỊNH BẮT BUỘC:
 - BẮT BUỘC toàn bộ nội dung phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH (sắc, huyền, hỏi, ngã, nặng) và nguyên âm có dấu (ă, â, ê, ô, ơ, ư, đ).
 - TUYỆT ĐỐI KHÔNG sử dụng văn mẫu chung chung. Mỗi bức ảnh phải có nhận định khác biệt, phù hợp với gương mặt đó.
 - TUYỆT ĐỐI KHÔNG sử dụng bất kỳ biểu tượng cảm xúc (emoji hoặc icon) nào trong toàn bộ văn bản phản hồi.`;
 
+    const asianAestheticsSchema = {
+      type: Type.OBJECT,
+      properties: {
+        visualWeight: {
+          type: Type.OBJECT,
+          properties: {
+            category: { type: Type.STRING, description: 'Nùng nhan (Đậm nét) hoặc Đạm nhan (Thanh nhạt)' },
+            blankSpaceAnalysis: { type: Type.STRING, description: 'Phân tích độ lưu bạch (khoảng trống trên mặt) và độ tương phản ngũ quan' }
+          },
+          required: ['category', 'blankSpaceAnalysis']
+        },
+        boneVsSoftTissue: {
+          type: Type.OBJECT,
+          properties: {
+            dominantType: { type: Type.STRING, description: 'Thiên về Mỹ nhân Cốt tướng, Bì tướng hay Cân bằng' },
+            contourSmoothness: { type: Type.STRING, description: 'Đánh giá độ mượt đường viền từ thái dương qua gò má xuống hàm' },
+            fourHighsThreeLows: { type: Type.STRING, description: 'Đánh giá độ nổi khối 3D Tứ Cao - Tam Thấp' }
+          },
+          required: ['dominantType', 'contourSmoothness', 'fourHighsThreeLows']
+        },
+        visualAgeMatrix: {
+          type: Type.OBJECT,
+          properties: {
+            neotenyVsMaturity: { type: Type.STRING, description: 'Tỷ lệ phần trăm Nét trẻ thơ (Neoteny) vs Trưởng thành (Maturity)' },
+            midfaceAndPhiltrum: { type: Type.STRING, description: 'Nhận xét chiều dài tầng mặt giữa và nhân trung' }
+          },
+          required: ['neotenyVsMaturity', 'midfaceAndPhiltrum']
+        },
+        asianArchetype: {
+          type: Type.OBJECT,
+          properties: {
+            vibeTitle: { type: Type.STRING, description: 'Ví dụ: Bạch Nguyệt Quang, Thuần Dục, Thiên Kim Tài Phiệt, Minh Tinh Hồng Kông...' },
+            animalType: { type: Type.STRING, description: 'Hệ Mèo, Cáo, Cún, Hươu, Thỏ, Cá, hoặc Rắn' },
+            detailedExplanation: { type: Type.STRING, description: 'Giải thích vì sao ngũ quan tạo nên khí chất này' }
+          },
+          required: ['vibeTitle', 'animalType', 'detailedExplanation']
+        },
+        tailoredAsianStyling: {
+          type: Type.OBJECT,
+          properties: {
+            makeupStyle: { type: Type.STRING, description: 'Gợi ý layout makeup (Douyin, Clean Girl, Hàn Quốc trong veo, Hồng Kông cổ điển...) phù hợp với Visual Weight' },
+            cranialHairTip: { type: Type.STRING, description: 'Gợi ý kiểu tóc giúp tạo hiệu ứng Đầu bao mặt (High Cranial Top) và che khuyết điểm viền hàm' }
+          },
+          required: ['makeupStyle', 'cranialHairTip']
+        }
+      },
+      required: ['visualWeight', 'boneVsSoftTissue', 'visualAgeMatrix', 'asianArchetype', 'tailoredAsianStyling']
+    };
+
     const generateConfig = {
       temperature: 0.1,
-      maxOutputTokens: 2800,
+      maxOutputTokens: 3800,
       systemInstruction: `Bạn là Hệ thống Phân tích Nhân trắc học & Thẩm mỹ AI cao cấp.
 Người dùng cung cấp ảnh chụp kèm thông số đo đạc 3D từ MediaPipe (đây là số liệu chuẩn, KHÔNG tự ý thay đổi điểm số toán học này).
 
 Nếu ảnh chụp hơi nghiêng (dựa vào thông số yaw/pitch/roll), hãy tự động nội suy cấu trúc xương 3D để đánh giá khách quan nhất, không trừ điểm đối xứng do góc máy.
 
-Hãy phân tích khuôn mặt cực kỳ chi tiết qua 3 lăng kính chuyên môn:
+Hãy phân tích khuôn mặt cực kỳ chi tiết qua các lăng kính chuyên môn:
 1. Giải phẫu & Tỷ lệ học (Anthropometrics): Phân tích Midface ratio (tỷ lệ tầng mặt giữa), Canthal Tilt (độ nghiêng trục mắt Dương/Âm/Ngang), FWHR, độ mở góc hàm và tỷ lệ 1/3, 1/5.
-2. Thẩm mỹ Á Đông & Trọng lượng thị giác (Visual Weight): Xác định khuôn mặt thuộc nhóm "High Visual Weight" (Ngũ quan đậm, sắc nét) hay "Low Visual Weight" (Ngũ quan thanh mảnh, nhiều khoảng trắng), phân tích độ tuổi thị giác (Neoteny/Trẻ thơ vs Maturity/Trưởng thành) và phân loại Hệ khuôn mặt (Mèo, Cáo, Cún, Hươu, Rắn...).
-3. Chuyên gia Định hình Phong cách (Styling & Personal Color): Dựa chính xác vào trọng lượng thị giác và khuyết điểm tỷ lệ ở bước 1 & 2 để tư vấn kiểu tóc (cụ thể phần mái, độ phồng), dáng kính, layout trang điểm và bảng màu HEX tôn da.
+2. Thẩm mỹ Á Đông & Trọng lượng thị giác (Visual Weight): Xác định Nùng nhan (Đậm nét) hay Đạm nhan (Thanh nhạt), độ lưu bạch, Cốt tướng vs Bì tướng, độ tuổi thị giác Neoteny vs Maturity, và Khí chất Á Đông (Bạch Nguyệt Quang, Thuần Dục, Thiên Kim...).
+3. Chuyên gia Định hình Phong cách (Styling & Personal Color): Gợi ý kiểu tóc (kỹ thuật Đầu bao mặt High Cranial Top, độ phồng, phần mái), dáng gọng kính, layout trang điểm Douyin / Clean Girl và bảng màu HEX tôn da.
 
 Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải chỉ rõ đặc điểm quan sát được trên mắt, mũi, môi, xương hàm của người trong ảnh. BẮT BUỘC toàn bộ nội dung phải được viết bằng tiếng Việt chuẩn ngữ pháp, đầy đủ dấu thanh và nguyên âm có dấu, tuyệt đối không dùng biểu tượng cảm xúc (emoji hoặc icon).`,
       responseMimeType: 'application/json',
@@ -559,6 +659,7 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
             },
             required: ['anthropometrics', 'visualWeight', 'fourHighsThreeLows', 'visualAge']
           },
+          asianAesthetics: asianAestheticsSchema,
           summary: {
             type: Type.STRING,
             description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Lời đúc kết tổng quan diện mạo'
@@ -575,6 +676,7 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
           'featuresAnalysis',
           'expertPanel',
           'advancedAesthetics',
+          'asianAesthetics',
           'summary'
         ]
       }
@@ -627,6 +729,15 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
       parsedData.harmonyScore = metrics.calculatedScore10;
     }
 
+    // Đồng bộ các trường Thẩm mỹ Á Đông lên cấp cao nhất
+    if (parsedData.asianAesthetics) {
+      parsedData.visualWeight = parsedData.asianAesthetics.visualWeight;
+      parsedData.boneVsSoftTissue = parsedData.asianAesthetics.boneVsSoftTissue;
+      parsedData.visualAgeMatrix = parsedData.asianAesthetics.visualAgeMatrix;
+      parsedData.asianArchetype = parsedData.asianAesthetics.asianArchetype;
+      parsedData.tailoredAsianStyling = parsedData.asianAesthetics.tailoredAsianStyling;
+    }
+
     return res.json({
       success: true,
       vibe_type: parsedData.vibe_type,
@@ -636,6 +747,12 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
       recommended_glasses: parsedData.recommended_glasses,
       expertPanel: parsedData.expertPanel,
       advancedAesthetics: parsedData.advancedAesthetics,
+      asianAesthetics: parsedData.asianAesthetics,
+      visualWeight: parsedData.visualWeight,
+      boneVsSoftTissue: parsedData.boneVsSoftTissue,
+      visualAgeMatrix: parsedData.visualAgeMatrix,
+      asianArchetype: parsedData.asianArchetype,
+      tailoredAsianStyling: parsedData.tailoredAsianStyling,
       data: parsedData,
       isDemo: false
     });
@@ -652,6 +769,12 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
       recommended_glasses: fallbackData.recommended_glasses,
       expertPanel: fallbackData.expertPanel,
       advancedAesthetics: fallbackData.advancedAesthetics,
+      asianAesthetics: fallbackData.asianAesthetics,
+      visualWeight: fallbackData.visualWeight,
+      boneVsSoftTissue: fallbackData.boneVsSoftTissue,
+      visualAgeMatrix: fallbackData.visualAgeMatrix,
+      asianArchetype: fallbackData.asianArchetype,
+      tailoredAsianStyling: fallbackData.tailoredAsianStyling,
       data: fallbackData,
       isDemo: true,
       notice: 'Dịch vụ trí tuệ nhân tạo tạm thời bận. Hệ thống đã chuyển tiếp sang phân tích nhân trắc học hình học tức thì.'

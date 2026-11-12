@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=17">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
@@ -89,6 +89,99 @@
                 <div class="scanning-status-bar" id="cameraScanningStatus" style="display: none;">
                     <span class="scanning-pulse-dot"></span>
                     <span class="scanning-text" id="cameraScanningText">Đang trích xuất 468 điểm mốc nhân trắc học...</span>
+                </div>
+
+                <!-- Thanh cài đặt tương tác trước khi chụp -->
+                <div class="pre-capture-settings" id="preCaptureSettings">
+                    <div class="settings-top-row">
+                        <div class="settings-title-group">
+                            <span class="settings-title">Cài Đặt Phân Tích Diện Mạo</span>
+                            <span class="settings-subtitle">Tùy biến mục tiêu và chế độ hiển thị trước khi chụp</span>
+                        </div>
+                        <!-- Nút gạt bật/tắt lớp phủ AR & Tỷ lệ vàng -->
+                        <div class="ar-toggle-container">
+                            <span class="ar-toggle-text">Lưới AR & Tỷ lệ vàng</span>
+                            <label class="ar-switch" for="arMeshToggle" title="Bật hoặc tắt lưới điểm AR và đường gióng tỷ lệ vàng">
+                                <input type="checkbox" id="arMeshToggle" checked>
+                                <span class="ar-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Chọn phong cách hướng tới -->
+                    <div class="settings-field">
+                        <span class="settings-field-label">Phong cách hướng tới:</span>
+                        <div class="setting-pills-row" id="genderStylePills">
+                            <button type="button" class="btn-setting-pill" data-gender="female">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="8" r="5"></circle>
+                                    <path d="M12 13v8"></path>
+                                    <path d="M9 18h6"></path>
+                                </svg>
+                                Nữ giới
+                            </button>
+                            <button type="button" class="btn-setting-pill" data-gender="male">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="10" cy="14" r="5"></circle>
+                                    <path d="M19 5l-5.4 5.4"></path>
+                                    <path d="M19 5h-5"></path>
+                                    <path d="M19 5v5"></path>
+                                </svg>
+                                Nam giới
+                            </button>
+                            <button type="button" class="btn-setting-pill active" data-gender="unisex">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="4"></circle>
+                                    <path d="M12 2v4"></path>
+                                    <path d="M12 18v4"></path>
+                                    <path d="M4.93 4.93l2.83 2.83"></path>
+                                    <path d="M16.24 16.24l2.83 2.83"></path>
+                                </svg>
+                                Unisex (Tự nhiên)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chọn chế độ phân tích Focus Mode -->
+                    <div class="settings-field">
+                        <span class="settings-field-label">Chế độ phân tích chuyên sâu:</span>
+                        <div class="setting-pills-row" id="focusModePills">
+                            <button type="button" class="btn-setting-pill active" data-focus="comprehensive">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                                Toàn diện
+                            </button>
+                            <button type="button" class="btn-setting-pill" data-focus="color_makeup">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+                                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+                                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+                                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+                                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"></path>
+                                </svg>
+                                Personal Color & Makeup
+                            </button>
+                            <button type="button" class="btn-setting-pill" data-focus="hair_glasses">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="6" cy="6" r="3"></circle>
+                                    <circle cx="6" cy="18" r="3"></circle>
+                                    <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                                    <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                                    <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                                </svg>
+                                Tư vấn Kiểu tóc & Kính
+                            </button>
+                            <button type="button" class="btn-setting-pill" data-focus="anthropometry">
+                                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                                    <path d="M2 12h20"></path>
+                                </svg>
+                                Nhân trắc học chuyên sâu
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="camera-controls">
@@ -424,6 +517,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=12"></script>
+    <script type="module" src="app.js?v=17"></script>
 </body>
 </html>

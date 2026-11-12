@@ -1005,6 +1005,666 @@ body {
     text-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
 }
 
+/* Hội đồng 3 chuyên gia thẩm định đa chiều */
+.expert-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-glass);
+}
+
+.expert-panel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.expert-panel-tag {
+    align-self: flex-start;
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--neon-cyan-bright);
+    background: rgba(0, 242, 254, 0.1);
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    padding: 3px 12px;
+    border-radius: 20px;
+}
+
+.expert-panel-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: -6px;
+    margin-bottom: 4px;
+}
+
+.expert-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.expert-card {
+    background: rgba(11, 15, 25, 0.75);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.25s ease;
+}
+
+.expert-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+}
+
+.expert-card-anthropologist {
+    border-top: 3px solid #00f2fe;
+}
+
+.expert-card-aesthetician {
+    border-top: 3px solid #a855f7;
+}
+
+.expert-card-stylist {
+    border-top: 3px solid #f59e0b;
+}
+
+.expert-card-top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.expert-badge {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+
+.expert-badge-cyan {
+    background: rgba(0, 242, 254, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.expert-badge-purple {
+    background: rgba(168, 85, 247, 0.12);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.expert-badge-amber {
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.expert-name {
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.expert-analysis {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.65;
+    flex-grow: 1;
+}
+
+.expert-keypoint {
+    background: rgba(30, 41, 59, 0.5);
+    border-left: 3px solid var(--neon-cyan);
+    padding: 8px 12px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.keypoint-label {
+    font-weight: 700;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.keypoint-text {
+    color: #ffffff;
+    line-height: 1.45;
+}
+
+/* Khung biên bản đối thoại và tranh luận */
+.debate-box {
+    margin-top: 4px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 27, 75, 0.45) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.debate-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.debate-tag {
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--neon-purple-bright);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.debate-content {
+    font-size: 0.93rem;
+    color: var(--text-primary);
+    line-height: 1.7;
+    font-style: italic;
+    background: rgba(11, 15, 25, 0.4);
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--neon-purple-bright);
+}
+
+.debate-verdict-box {
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.verdict-label {
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.verdict-text {
+    font-size: 0.95rem;
+    color: #ffffff;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+/* Khối phân tích nhân trắc học thẩm mỹ chuyên sâu */
+.advanced-aesthetics-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-glass);
+}
+
+.advanced-aesthetics-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aesthetics-section-tag {
+    align-self: flex-start;
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 3px 12px;
+    border-radius: 20px;
+}
+
+.aesthetics-section-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: -6px;
+    margin-bottom: 4px;
+}
+
+.aesthetics-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.aesthetic-card {
+    background: rgba(11, 15, 25, 0.75);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.25s ease;
+}
+
+.aesthetic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+}
+
+.aesthetic-card-weight {
+    border-top: 3px solid #ec4899;
+}
+
+.aesthetic-card-contour {
+    border-top: 3px solid #00f2fe;
+}
+
+.aesthetic-card-age {
+    border-top: 3px solid #8b5cf6;
+}
+
+.aesthetic-card-metrics {
+    border-top: 3px solid #10b981;
+}
+
+.aesthetic-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.aesthetic-badge {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+
+.badge-weight {
+    background: rgba(236, 72, 153, 0.15);
+    color: #f472b6;
+    border: 1px solid rgba(236, 72, 153, 0.35);
+}
+
+.badge-contour {
+    background: rgba(0, 242, 254, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.badge-age {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.badge-metrics {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.aesthetic-card-title {
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.aesthetic-card-desc {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.65;
+    flex-grow: 1;
+}
+
+.aesthetic-tip-box {
+    background: rgba(30, 41, 59, 0.55);
+    border-left: 3px solid #ec4899;
+    padding: 10px 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tip-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #f472b6;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tip-text {
+    font-size: 0.88rem;
+    color: #ffffff;
+    line-height: 1.5;
+}
+
+.contour-highlight {
+    background: rgba(6, 182, 212, 0.08);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.contour-score-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.contour-score-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #38bdf8;
+}
+
+.contour-guide-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.78rem;
+    margin-top: 4px;
+}
+
+.pill-high {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid #38bdf8;
+}
+
+.pill-low {
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid #94a3b8;
+}
+
+.age-spectrum-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(30, 41, 59, 0.45);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin-top: 6px;
+}
+
+.spectrum-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #c084fc;
+}
+
+.spectrum-line {
+    flex-grow: 1;
+    height: 4px;
+    background: linear-gradient(90deg, #c084fc, #38bdf8);
+    border-radius: 2px;
+}
+
+.metrics-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.88rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-bottom: 4px;
+}
+
+.m-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+
+.m-val {
+    color: #ffffff;
+    font-weight: 700;
+    text-align: right;
+}
+
+.metric-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    margin-top: -4px;
+    margin-bottom: 4px;
+}
+
+/* Hệ thống Thẩm mỹ Á Đông & Khí chất Diện mạo */
+.asian-aesthetics-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(15, 23, 42, 0.68);
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.08);
+}
+
+.asian-aesthetics-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.asian-section-tag {
+    align-self: flex-start;
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c084fc;
+    background: rgba(139, 92, 246, 0.14);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    padding: 3px 12px;
+    border-radius: 20px;
+}
+
+.asian-section-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: -6px;
+    margin-bottom: 4px;
+}
+
+.asian-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.asian-card {
+    background: rgba(11, 15, 25, 0.78);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.25s ease;
+}
+
+.asian-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+}
+
+.asian-card-archetype {
+    border-top: 3px solid #f59e0b;
+}
+
+.asian-card-weight {
+    border-top: 3px solid #ec4899;
+}
+
+.asian-card-bone {
+    border-top: 3px solid #38bdf8;
+}
+
+.asian-card-age {
+    border-top: 3px solid #a855f7;
+}
+
+.asian-card-styling {
+    border-top: 3px solid #10b981;
+}
+
+.full-width-card {
+    grid-column: 1 / -1;
+}
+
+.asian-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.asian-badge {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+
+.badge-archetype {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge-styling {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge-bone {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.asian-card-title {
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.asian-card-desc {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.65;
+    flex-grow: 1;
+}
+
+.asian-sub-point {
+    background: rgba(30, 41, 59, 0.45);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.82rem;
+}
+
+.sub-label {
+    color: #38bdf8;
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+}
+
+.sub-val {
+    color: #e2e8f0;
+    line-height: 1.4;
+}
+
+.asian-styling-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.styling-subblock {
+    background: rgba(15, 23, 42, 0.6);
+    border-left: 3px solid #10b981;
+    padding: 12px 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.styling-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #34d399;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.styling-text {
+    font-size: 0.88rem;
+    color: #ffffff;
+    line-height: 1.5;
+}
+
 /* Phần đề xuất 3 kiểu tóc */
 .hairstyles-section {
     display: flex;
@@ -2165,4 +2825,192 @@ body {
     color: #cbd5e1;
     line-height: 1.5;
 }
+
+/* ==========================================================================
+   Thanh Cài Đặt Tương Tác Trước Khi Chụp (Pre-Capture Settings Bar)
+   ========================================================================== */
+.pre-capture-settings {
+    background: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-top: 14px;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 640px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.settings-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 12px;
+}
+
+.settings-title-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f8fafc;
+    font-family: 'Be Vietnam Pro', 'Space Grotesk', sans-serif;
+}
+
+.settings-subtitle {
+    font-size: 0.74rem;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+
+.ar-toggle-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ar-toggle-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #38bdf8;
+}
+
+/* Công tắc gạt (Toggle Switch) */
+.ar-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ar-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ar-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: rgba(51, 65, 85, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.25s ease;
+    border-radius: 24px;
+}
+
+.ar-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.ar-switch input:checked + .ar-slider {
+    background: linear-gradient(135deg, #8b5cf6, #00f2fe);
+    border-color: #00f2fe;
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.35);
+}
+
+.ar-switch input:checked + .ar-slider:before {
+    transform: translateX(20px);
+}
+
+.settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-field-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.setting-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-setting-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 9999px;
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-setting-pill .btn-icon {
+    color: #94a3b8;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-setting-pill:hover {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #f1f5f9;
+}
+
+.btn-setting-pill.active {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.35) 0%, rgba(0, 242, 254, 0.25) 100%);
+    border-color: #00f2fe;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 14px rgba(0, 242, 254, 0.22);
+}
+
+.btn-setting-pill.active .btn-icon {
+    color: #00f2fe;
+}
+
+@media (max-width: 600px) {
+    .pre-capture-settings {
+        padding: 14px;
+    }
+    .settings-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .ar-toggle-container {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .btn-setting-pill {
+        font-size: 0.76rem;
+        padding: 6px 11px;
+    }
+}
+
 
