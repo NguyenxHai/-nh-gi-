@@ -347,25 +347,43 @@ async function handleFaceAnalysis(req, res) {
       const score100Text = metrics.calculatedScore100 ? `${metrics.calculatedScore100.toFixed(1)}/100` : '85.0/100';
       const score10Val = typeof metrics.calculatedScore10 === 'number' ? metrics.calculatedScore10 : 8.5;
 
+      const canthalInfo = metrics.canthalTiltClinical || (metrics.canthalTiltType ? `Độ nghiêng trục mắt: ${metrics.canthalTiltType} (${metrics.canthalTiltDesc || ''})` : 'Không xác định');
+      const visualWeightInfo = metrics.visualWeightClinical || (metrics.visualWeightCategory ? `Trọng lượng thị giác: ${metrics.visualWeightCategory} (${metrics.visualWeightDesc || ''})` : 'Không xác định');
+      const boneInfo = metrics.boneStructureClinical || (metrics.fwhrText ? `Tương quan Cốt tướng vs Bì tướng: FWHR ${metrics.fwhrText}` : 'Không xác định');
+      const midfaceInfo = metrics.midfaceClinical || (metrics.midfaceRatioText ? `Tỷ lệ tầng mặt giữa: ${metrics.midfaceRatioText}` : 'Không xác định');
+      const visualAgeInfo = metrics.visualAgeClinical || (metrics.visualAgeTendency ? `Độ tuổi thị giác: ${metrics.visualAgeTendency}` : 'Không xác định');
+      const fourHighsInfo = metrics.fourHighsClinical || (metrics.fourHighsThreeLowsScore ? `Tứ Cao Tam Thấp 3D: ${metrics.fourHighsThreeLowsScore}` : 'Không xác định');
+
       metricsContext = `
-Dưới đây là các thông số hình học được đo đạc chính xác từ các điểm mốc trên khuôn mặt (hệ tọa độ 3 chiều MediaPipe):
-- Tỷ lệ ba phần chiều dọc (Trán : Mũi : Cằm): ${metrics.verticalRatioText || 'Không xác định'} (Tỷ lệ chuẩn mực tham chiếu là 1.0 : 1.0 : 1.0 hay 33.3% - 33.3% - 33.3%).
-- Tỷ lệ năm phần chiều ngang: Độ rộng mắt chiếm ${metrics.horizontalEyeRatioText || 'Không xác định'} bề ngang khuôn mặt (Tỷ lệ tham chiếu theo quy tắc ngũ nhãn là xấp xỉ 20%).
-- Độ đối xứng hai bên khuôn mặt: ${metrics.symmetryScoreText || 'Không xác định'}.
-- Tỷ lệ chiều ngang / chiều dài mặt: ${metrics.faceRatio ? metrics.faceRatio.toFixed(2) : 'Không xác định'}.
-- Tỷ lệ tầng mặt giữa (Midface ratio): ${metrics.midfaceRatioText || 'Không xác định'}.
-- Độ nghiêng trục mắt (Canthal Tilt): ${metrics.canthalTiltType || 'Không xác định'} (${metrics.canthalTiltDesc || ''}).
-- Tỷ lệ FWHR (Chiều ngang gò má / Chiều cao ngũ quan): ${metrics.fwhrText || 'Không xác định'}.
-- Thông số góc nghiêng đầu (Head Pose): ${metrics.headPoseText || 'Không xác định'}.
-- Trọng lượng thị giác đo đạc sơ bộ (Visual Weight): ${metrics.visualWeightCategory || 'Không xác định'} (${metrics.visualWeightDesc || ''}).
-- Cấu trúc Tứ Cao Tam Thấp 3D: ${metrics.fourHighsThreeLowsScore || 'Không xác định'}.
-- Xu hướng độ tuổi thị giác: ${metrics.visualAgeTendency || 'Không xác định'}.
-- Điểm cân đối hài hòa đã được máy đo đạc chính xác bằng toán học: ${score100Text} (tương đương ${score10Val.toFixed(1)}/10).
+DƯỚI ĐÂY LÀ KẾT QUẢ ĐO ĐẠC HÌNH HỌC VÀ CÁC NHÃN KẾT LUẬN GIẢI PHẪU LÂM SÀNG CHÍNH XÁC (từ hệ tọa độ 3 chiều MediaPipe):
+1. TRỤC MẮT & KHÍ CHẤT:
+   - ${canthalInfo}
+2. TRỌNG LƯỢNG THỊ GIÁC & ĐỘ LƯU BẠCH (VISUAL WEIGHT):
+   - ${visualWeightInfo}
+3. CỐT TƯỚNG VS BÌ TƯỚNG & KHUNG XƯƠNG:
+   - ${boneInfo}
+   - Tỷ lệ FWHR (Bề ngang gò má / Chiều cao ngũ quan): ${metrics.fwhrText || 'Không xác định'}
+   - Tỷ lệ ngang/dọc khuôn mặt: ${metrics.faceRatio ? metrics.faceRatio.toFixed(2) : 'Không xác định'}
+4. TẦNG MẶT GIỮA & NHÂN TRUNG:
+   - ${midfaceInfo}
+5. MA TRẬN ĐỘ TUỔI THỊ GIÁC (NEOTENY VS MATURITY):
+   - ${visualAgeInfo}
+6. ĐỘ NỔI KHỐI TỨ CAO - TAM THẤP 3D:
+   - ${fourHighsInfo}
+7. CÁC TỶ LỆ NHÂN TRẮC HỌC CƠ BẢN:
+   - Tỷ lệ ba phần chiều dọc (Trán : Mũi : Cằm): ${metrics.verticalRatioText || 'Không xác định'}
+   - Tỷ lệ năm phần chiều ngang (Ngũ nhãn): Độ rộng mắt chiếm ${metrics.horizontalEyeRatioText || 'Không xác định'}
+   - Độ đối xứng hai bên trục giữa: ${metrics.symmetryScoreText || 'Không xác định'}
+   - Góc xoay đầu (Head Pose): ${metrics.headPoseText || 'Thẳng đứng chuẩn hóa'}
+   - Điểm cân đối hài hòa máy đo được: ${score100Text} (tương đương ${score10Val.toFixed(1)}/10).
 `;
 
       scoreDirectives = `
-MỆNH LỆNH BẮT BUỘC VỀ ĐIỂM CÂN ĐỐI (HARMONY SCORE):
-Điểm cân đối của người này đã được máy đo chính xác là ${score100Text} (tương đương ${score10Val.toFixed(1)}/10). Hãy dùng đúng con số ${score10Val.toFixed(1)} này cho trường harmonyScore trong JSON trả về và giải thích nguyên nhân dựa trên các số liệu thực tế đó (độ đối xứng ${metrics.symmetryScoreText || ''}, tỷ lệ ba phần dọc ${metrics.verticalRatioText || ''}), TUYỆT ĐỐI KHÔNG TỰ CHẤM HOẶC BỊA RA MỘT ĐIỂM SỐ KHÁC.
+MỆNH LỆNH BẮT BUỘC VỀ ĐIỂM CÂN ĐỐI (HARMONY SCORE) VÀ KẾT LUẬN GIẢI PHẪU:
+1. ĐIỂM CÂN ĐỐI: Điểm cân đối của người này đã được máy đo chính xác là ${score100Text} (tương đương ${score10Val.toFixed(1)}/10). Hãy dùng đúng con số ${score10Val.toFixed(1)} này cho trường harmonyScore trong JSON trả về và giải thích nguyên nhân dựa trên các số liệu thực tế đó, TUYỆT ĐỐI KHÔNG TỰ CHẤM HOẶC BỊA RA MỘT ĐIỂM SỐ KHÁC.
+2. TIẾP NHẬN KẾT LUẬN GIẢI PHẪU LÂM SÀNG CÓ SẴN: Các kết luận giải phẫu trên (như Độ nghiêng trục mắt, Nùng Nhan vs Đạm Nhan, Cốt tướng vs Bì tướng, Ma trận Neoteny vs Maturity) ĐÃ ĐƯỢC THUẬT TOÁN ĐO ĐẠC VÀ ĐƯA RA KẾT LUẬN CHUẨN XÁC. Bạn KHÔNG cần phải suy luận lại từ con số thô. Hãy dùng trực tiếp các kết luận này để tập trung 100% năng lực vào việc:
+   - Mô tả thần thái diện mạo, khí chất ngũ quan Á Đông sâu sắc, cuốn hút.
+   - Tư vấn chiến lược Styling kiểu tóc (High Cranial Top - Đầu bao mặt), dáng gọng kính và layout trang điểm tôn nét đẹp riêng biệt.
 `;
     }
 
