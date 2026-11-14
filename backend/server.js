@@ -220,6 +220,40 @@ function generateFallbackAnalysis(metrics) {
     }
   };
 
+  const slimmerSide = metrics?.slimmerSide || 'Bên Trái';
+  const biggerEye = metrics?.biggerEyeSide || 'Mắt Phải';
+  const detectedFlaws = metrics?.detectedFlaws || [];
+
+  const defaultBestPhotoAngles = {
+    bestSide: `Nghiêng 45° ${slimmerSide}`,
+    cameraHeight: faceRatio > 0.85 
+      ? 'Cao hơn tầm mắt 15°–20°, hướng nhẹ từ trên xuống để làm thon gọn đường viền hàm'
+      : 'Ngang tầm mắt hoặc cao hơn nhẹ 10° để tôn sống mũi và chiều sâu đôi mắt',
+    faceRotation: `Nghiêng mặt 45° sang phía đối diện để khoe trọn góc mặt ${slimmerSide.toLowerCase()} thanh tú`,
+    expressionTip: 'Mỉm cười nhẹ thả lỏng cơ hàm, ánh mắt hướng tự nhiên vào ống kính',
+    cameraAngleGuide: faceRatio > 0.85 
+      ? 'Đặt camera cao hơn tầm mắt 15-20 độ, nghiêng mặt 45 độ về phía góc mặt thon gọn và hơi hạ nhẹ cằm để tạo hiệu ứng đường viền hàm thanh thoát V-line.'
+      : 'Đặt camera ngang tầm mắt hoặc chếch nhẹ 10-15 độ, chụp góc nghiêng 45 độ để tôn sống mũi và chiều sâu đôi mắt.',
+    poseAndExpressionTip: 'Áp dụng nụ cười mỉm nhẹ thả lỏng cơ hàm, đánh ánh sáng nghiêng 45 độ từ phía trước để tạo khối nổi bật cho gò má và sống mũi.'
+  };
+
+  const defaultFlawsAndFixes = [
+    {
+      flawName: detectedFlaws[0] ? detectedFlaws[0].split(' (')[0] : 'Đường viền xương hàm có độ lệch nhẹ',
+      observation: `Khung xương hàm hai bên có sự chênh lệch tự nhiên nhẹ, góc hàm ${slimmerSide.toLowerCase()} thanh mảnh hơn phía đối diện.`,
+      quickFix: 'Ưu tiên chụp góc nghiêng 3/4 tôn bên mặt thon gọn, kết hợp tóc rẽ ngôi hoặc mái bay buông lơi che nhẹ góc hàm còn lại.'
+    },
+    {
+      flawName: nosePct > 34 ? 'Tầng mặt giữa hơi dài' : 'Khoảng cách giữa hai mắt cần điểm nhấn',
+      observation: nosePct > 34 
+        ? 'Tỷ lệ sống mũi chiếm diện tích dọc lớn, khiến khuôn mặt mang nét chững chạc hơn.'
+        : 'Khoảng cách hai đầu mắt cần điều tiết nhẹ bằng kỹ thuật tạo khối để đôi mắt có chiều sâu hơn.',
+      quickFix: nosePct > 34
+        ? 'Tạo khối ngang ở đầu mũi và dùng phấn má tán ngang gò má để rút ngắn trục dọc thị giác.'
+        : 'Nhấn sáng nhẹ ở khóe mắt trong và chuốt mascara tập trung ở đuôi mắt để mở rộng ánh nhìn.'
+    }
+  ];
+
   return {
     vibe_type: vibe,
     eye_shape: eyeShape,
@@ -286,6 +320,8 @@ function generateFallbackAnalysis(metrics) {
     visualAgeMatrix: asianAestheticsData.visualAgeMatrix,
     asianArchetype: asianAestheticsData.asianArchetype,
     tailoredAsianStyling: asianAestheticsData.tailoredAsianStyling,
+    bestPhotoAngles: defaultBestPhotoAngles,
+    flawsAndFixes: defaultFlawsAndFixes,
     summary: 'Khuôn mặt sở hữu đường nét ngũ quan hài hòa và khí chất tự nhiên nổi bật. Hãy tự tin tôn vinh vẻ đẹp riêng thông qua phong cách tóc và phụ kiện phù hợp.'
   };
 }
@@ -331,6 +367,8 @@ async function handleFaceAnalysis(req, res) {
         visualAgeMatrix: fallbackData.visualAgeMatrix,
         asianArchetype: fallbackData.asianArchetype,
         tailoredAsianStyling: fallbackData.tailoredAsianStyling,
+        bestPhotoAngles: fallbackData.bestPhotoAngles,
+        flawsAndFixes: fallbackData.flawsAndFixes,
         data: fallbackData,
         isDemo: true,
         notice: 'Hệ thống đang hiển thị kết quả thử nghiệm theo thông số hình học. Hãy cấu hình khóa xác thực để kích hoạt trí tuệ nhân tạo.'
@@ -354,6 +392,13 @@ async function handleFaceAnalysis(req, res) {
       const visualAgeInfo = metrics.visualAgeClinical || (metrics.visualAgeTendency ? `Độ tuổi thị giác: ${metrics.visualAgeTendency}` : 'Không xác định');
       const fourHighsInfo = metrics.fourHighsClinical || (metrics.fourHighsThreeLowsScore ? `Tứ Cao Tam Thấp 3D: ${metrics.fourHighsThreeLowsScore}` : 'Không xác định');
 
+      const anglesInfo = metrics.anglesAndFlaws || {};
+      const flawsListText = Array.isArray(metrics.detectedFlaws) && metrics.detectedFlaws.length 
+        ? metrics.detectedFlaws.map(f => `- ${f}`).join('\n   ')
+        : (Array.isArray(anglesInfo.detectedFlaws) && anglesInfo.detectedFlaws.length 
+          ? anglesInfo.detectedFlaws.map(f => `- ${f}`).join('\n   ') 
+          : '- Các tỷ lệ cơ bản khá cân đối');
+
       metricsContext = `
 DƯỚI ĐÂY LÀ KẾT QUẢ ĐO ĐẠC HÌNH HỌC VÀ CÁC NHÃN KẾT LUẬN GIẢI PHẪU LÂM SÀNG CHÍNH XÁC (từ hệ tọa độ 3 chiều MediaPipe):
 1. TRỤC MẮT & KHÍ CHẤT:
@@ -376,6 +421,12 @@ DƯỚI ĐÂY LÀ KẾT QUẢ ĐO ĐẠC HÌNH HỌC VÀ CÁC NHÃN KẾT LUẬN
    - Độ đối xứng hai bên trục giữa: ${metrics.symmetryScoreText || 'Không xác định'}
    - Góc xoay đầu (Head Pose): ${metrics.headPoseText || 'Thẳng đứng chuẩn hóa'}
    - Điểm cân đối hài hòa máy đo được: ${score100Text} (tương đương ${score10Val.toFixed(1)}/10).
+8. THÔNG SỐ BẤT ĐỐI XỨNG TRÁI/PHẢI & ĐIỂM LỆCH CHUẨN THỰC TẾ:
+   - Bên mặt có xương hàm thon gọn hơn: ${metrics.slimmerSide || anglesInfo.slimmerSide || 'Bên Trái'} (Chênh lệch bề ngang hàm: ${metrics.jawDiffPercent || anglesInfo.jawDiffPercent || '0%'})
+   - Bên mắt có độ mở to hơn: ${metrics.biggerEyeSide || anglesInfo.biggerEyeSide || 'Mắt Phải'}
+   - Độ nhô sống mũi không gian 3D: ${metrics.noseProjectionZ || anglesInfo.noseProjectionZ || '0.120'}
+   - Các điểm lệch chuẩn đo được:
+   ${flawsListText}
 `;
 
       scoreDirectives = `
@@ -384,6 +435,7 @@ MỆNH LỆNH BẮT BUỘC VỀ ĐIỂM CÂN ĐỐI (HARMONY SCORE) VÀ KẾT LU
 2. TIẾP NHẬN KẾT LUẬN GIẢI PHẪU LÂM SÀNG CÓ SẴN: Các kết luận giải phẫu trên (như Độ nghiêng trục mắt, Nùng Nhan vs Đạm Nhan, Cốt tướng vs Bì tướng, Ma trận Neoteny vs Maturity) ĐÃ ĐƯỢC THUẬT TOÁN ĐO ĐẠC VÀ ĐƯA RA KẾT LUẬN CHUẨN XÁC. Bạn KHÔNG cần phải suy luận lại từ con số thô. Hãy dùng trực tiếp các kết luận này để tập trung 100% năng lực vào việc:
    - Mô tả thần thái diện mạo, khí chất ngũ quan Á Đông sâu sắc, cuốn hút.
    - Tư vấn chiến lược Styling kiểu tóc (High Cranial Top - Đầu bao mặt), dáng gọng kính và layout trang điểm tôn nét đẹp riêng biệt.
+3. PHÂN TÍCH GÓC MẶT ĐẸP & ĐIỂM LỆCH CHUẨN: Dựa trên thông số bất đối xứng Trái/Phải và danh sách các điểm lệch chuẩn đo đạc thực tế, hãy chỉ ra thẳng thắn nhưng lịch sự 2-3 điểm chưa hoàn hảo (về khung xương, tỷ lệ mắt/mũi/nhân trung/cằm hoặc mô mềm) kèm hướng dẫn góc chụp ăn ảnh nhất và cách dùng tóc, makeup, phụ kiện để khắc phục ngay lập tức. Tuyệt đối không khen chung chung hoặc né tránh.
 `;
     }
 
@@ -445,6 +497,18 @@ YÊU CẦU PHÂN TÍCH RIÊNG BIỆT VÀ ĐỘC BẢN CHO BỨC ẢNH NÀY (TUY�
     - visualAgeMatrix: Tỷ lệ phần trăm Nét trẻ thơ (Neoteny) vs Trưởng thành (Maturity); nhận xét chiều dài tầng mặt giữa và nhân trung.
     - asianArchetype: vibeTitle (ví dụ: Bạch Nguyệt Quang, Thuần Dục, Thiên Kim Tài Phiệt, Minh Tinh Hồng Kông...); animalType (Hệ Mèo, Cáo, Cún, Hươu, Thỏ, Cá, hoặc Rắn); detailedExplanation (giải thích vì sao ngũ quan tạo nên khí chất này).
     - tailoredAsianStyling: makeupStyle (gợi ý layout makeup Douyin, Clean Girl, Hàn Quốc trong veo, Hồng Kông cổ điển... phù hợp với Visual Weight); cranialHairTip (gợi ý kiểu tóc giúp tạo hiệu ứng Đầu bao mặt High Cranial Top và che khuyết điểm viền hàm).
+11. Phân tích Bí kíp góc máy & Bản đồ tinh chỉnh diện mạo (bestPhotoAngles & flawsAndFixes):
+    - bestPhotoAngles:
+      + bestSide: Nhãn góc thần thánh ngắn gọn, nổi bật (ví dụ: "Nghiêng 45° Bên Trái", "Nghiêng 30° Bên Phải", "Trực diện chếch nhẹ").
+      + cameraHeight: Hướng dẫn ngắn gọn về độ cao camera (ví dụ: "Cao hơn tầm mắt 15°–20°, hướng nhẹ từ trên xuống").
+      + faceRotation: Hướng dẫn ngắn gọn về góc xoay mặt (ví dụ: "Nghiêng mặt 45° sang phải để khoe trọn góc mặt trái thon gọn").
+      + expressionTip: Hướng dẫn ngắn gọn về biểu cảm và ánh sáng (ví dụ: "Mỉm cười thả lỏng cơ hàm, ánh mắt nhìn tự nhiên vào ống kính").
+      + cameraAngleGuide: Tóm tắt hướng dẫn cách đặt máy ảnh tổng thể.
+      + poseAndExpressionTip: Mẹo biểu cảm tổng thể khi chụp ảnh.
+    - flawsAndFixes: Bản đồ tinh chỉnh diện mạo (Optimization Map), chỉ ra 2 đến 3 điểm cần tinh chỉnh theo cặp đối xứng (Quan sát và Giải pháp tức thì):
+      + flawName: Tên điểm cần tinh chỉnh (ví dụ: "Thái dương hơi hóp", "Tầng mặt giữa hơi dài", "Góc hàm bất đối xứng nhẹ").
+      + observation: Quan sát khách quan vị trí và đặc điểm (ví dụ: "Thái dương hơi hóp làm lộ gò má khi nhìn trực diện").
+      + quickFix: Giải pháp tức thì bằng tóc, makeup tạo khối hoặc góc máy (ví dụ: "Để tóc mái bay uốn cong chữ S ngang tầm xương gò má để che khuyết điểm").
 
 QUY ĐỊNH BẮT BUỘC:
 - BẮT BUỘC toàn bộ nội dung phải được viết bằng TIẾNG VIỆT CÓ ĐẦY ĐỦ DẤU THANH (sắc, huyền, hỏi, ngã, nặng) và nguyên âm có dấu (ă, â, ê, ô, ơ, ư, đ).
@@ -512,6 +576,7 @@ Hãy phân tích khuôn mặt cực kỳ chi tiết qua các lăng kính chuyên
 1. Giải phẫu & Tỷ lệ học (Anthropometrics): Phân tích Midface ratio (tỷ lệ tầng mặt giữa), Canthal Tilt (độ nghiêng trục mắt Dương/Âm/Ngang), FWHR, độ mở góc hàm và tỷ lệ 1/3, 1/5.
 2. Thẩm mỹ Á Đông & Trọng lượng thị giác (Visual Weight): Xác định Nùng nhan (Đậm nét) hay Đạm nhan (Thanh nhạt), độ lưu bạch, Cốt tướng vs Bì tướng, độ tuổi thị giác Neoteny vs Maturity, và Khí chất Á Đông (Bạch Nguyệt Quang, Thuần Dục, Thiên Kim...).
 3. Chuyên gia Định hình Phong cách (Styling & Personal Color): Gợi ý kiểu tóc (kỹ thuật Đầu bao mặt High Cranial Top, độ phồng, phần mái), dáng gọng kính, layout trang điểm Douyin / Clean Girl và bảng màu HEX tôn da.
+4. Phân tích Góc mặt đẹp & Nhược điểm (Best Angles & Flaws): Dựa trên thông số bất đối xứng Trái/Phải và danh sách detectedFlaws từ MediaPipe kết hợp quan sát ảnh, hãy chỉ ra thẳng thắn nhưng lịch sự 2-3 điểm chưa hoàn hảo (về khung xương, tỷ lệ mắt/mũi/nhân trung/cằm hoặc mô mềm) và cách dùng tóc/makeup/góc chụp để che đi. Tuyệt đối không khen chung chung.
 
 Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải chỉ rõ đặc điểm quan sát được trên mắt, mũi, môi, xương hàm của người trong ảnh. BẮT BUỘC toàn bộ nội dung phải được viết bằng tiếng Việt chuẩn ngữ pháp, đầy đủ dấu thanh và nguyên âm có dấu, tuyệt đối không dùng biểu tượng cảm xúc (emoji hoặc icon).`,
       responseMimeType: 'application/json',
@@ -678,6 +743,50 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
             required: ['anthropometrics', 'visualWeight', 'fourHighsThreeLows', 'visualAge']
           },
           asianAesthetics: asianAestheticsSchema,
+          bestPhotoAngles: {
+            type: Type.OBJECT,
+            description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Hướng dẫn góc chụp đẹp và ăn ảnh nhất (Bí kíp góc máy)',
+            properties: {
+              bestSide: { 
+                type: Type.STRING, 
+                description: 'Nhãn góc thần thánh ngắn gọn, làm nổi bật góc mặt đẹp nhất (ví dụ: Nghiêng 45° Bên Trái, Nghiêng 30° Bên Phải, hoặc Trực diện chếch nhẹ).' 
+              },
+              cameraHeight: {
+                type: Type.STRING,
+                description: 'Dòng hướng dẫn ngắn gọn về Độ cao camera (ví dụ: Cao hơn tầm mắt 15-20 độ, hướng nhẹ từ trên xuống).'
+              },
+              faceRotation: {
+                type: Type.STRING,
+                description: 'Dòng hướng dẫn ngắn gọn về Góc xoay mặt (ví dụ: Xoay mặt chếch 45 độ sang phải để khoe trọn góc mặt trái thon gọn).'
+              },
+              expressionTip: {
+                type: Type.STRING,
+                description: 'Dòng hướng dẫn ngắn gọn về Biểu cảm & ánh sáng (ví dụ: Cười mỉm tự nhiên thả lỏng cơ hàm, mắt nhìn thư thái).'
+              },
+              cameraAngleGuide: { 
+                type: Type.STRING, 
+                description: 'Hướng dẫn tổng thể cách đặt camera để che khuyết điểm và tôn đường nét nhất.' 
+              },
+              poseAndExpressionTip: { 
+                type: Type.STRING, 
+                description: 'Mẹo biểu cảm khi chụp ảnh (cười mỉm, ánh mắt, cách đón ánh sáng).' 
+              }
+            },
+            required: ['bestSide', 'cameraHeight', 'faceRotation', 'expressionTip']
+          },
+          flawsAndFixes: {
+            type: Type.ARRAY,
+            description: 'Bản đồ tinh chỉnh diện mạo (Optimization Map): Danh sách 2 đến 3 điểm cần tinh chỉnh theo cặp đối xứng (Quan sát và Giải pháp tức thì).',
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                flawName: { type: Type.STRING, description: 'Tên điểm cần tinh chỉnh ngắn gọn (VD: Thái dương hơi hóp, Tầng mặt giữa dài, Cánh mũi hơi bè...)' },
+                observation: { type: Type.STRING, description: 'Mô tả ngắn gọn quan sát thực tế (VD: Thái dương hơi hóp làm lộ gò má).' },
+                quickFix: { type: Type.STRING, description: 'Giải pháp tức thì bằng kiểu tóc, makeup tạo khối hoặc góc máy (VD: Để tóc mái bay uốn cong chữ S ngang tầm xương gò má).' }
+              },
+              required: ['flawName', 'observation', 'quickFix']
+            }
+          },
           summary: {
             type: Type.STRING,
             description: 'Bắt buộc tiếng Việt có dấu đầy đủ: Lời đúc kết tổng quan diện mạo'
@@ -695,6 +804,8 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
           'expertPanel',
           'advancedAesthetics',
           'asianAesthetics',
+          'bestPhotoAngles',
+          'flawsAndFixes',
           'summary'
         ]
       }
@@ -771,6 +882,8 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
       visualAgeMatrix: parsedData.visualAgeMatrix,
       asianArchetype: parsedData.asianArchetype,
       tailoredAsianStyling: parsedData.tailoredAsianStyling,
+      bestPhotoAngles: parsedData.bestPhotoAngles,
+      flawsAndFixes: parsedData.flawsAndFixes,
       data: parsedData,
       isDemo: false
     });
@@ -793,6 +906,8 @@ Tuyệt đối không nhận xét chung chung một câu. Mỗi mục phải ch�
       visualAgeMatrix: fallbackData.visualAgeMatrix,
       asianArchetype: fallbackData.asianArchetype,
       tailoredAsianStyling: fallbackData.tailoredAsianStyling,
+      bestPhotoAngles: fallbackData.bestPhotoAngles,
+      flawsAndFixes: fallbackData.flawsAndFixes,
       data: fallbackData,
       isDemo: true,
       notice: 'Dịch vụ trí tuệ nhân tạo tạm thời bận. Hệ thống đã chuyển tiếp sang phân tích nhân trắc học hình học tức thì.'
